@@ -819,12 +819,12 @@ function viewHistorico(){
 }
 /* ===== P&G · dados técnicos ===== */
 function viewPG(){
- const items=prod.filter(p=>p.status==="P&G");
- let h='<div class="util" style="font-size:12.5px;color:var(--muted);margin:14px 2px 10px">Livros em <b>P&G</b> (tratamento pré-gráfica). Preencha os dados técnicos e gere o arquivo quando estiver pronto. (Marque o Status de uma obra como "P&G" no editor pra ela aparecer aqui.)</div>';
+ const items=prod.filter(p=>p.status==="P&G" && (p.local||'')!=='grafica' && (p.local||'')!=='estoque');
+ let h='<div class="util" style="font-size:12.5px;color:var(--muted);margin:14px 2px 10px">Livros em <b>P&G</b> (tratamento pré-gráfica). Preencha os dados técnicos, gere o arquivo e clique em <b>→ Enviar para Gráfica</b> quando estiver pronto. (Marque o Status de uma obra como "P&G" no editor pra ela aparecer aqui.)</div>';
  if(!items.length)return h+'<div class="empty">Nenhum livro em P&G no momento.</div>';
  h+='<div class="selogroup" style="--gc:#5A0F22"><div class="selohead" style="background:#5A0F22"><span class="sn">Pré-Gráfica · P&G</span><span class="cnt">'+items.length+' títulos</span></div>';
  h+=items.map(p=>{const dt=p.dados_tecnicos||{};const ok=(dt.capa&&dt.capa.formato&&dt.miolo&&dt.miolo.paginacao);
-   return '<div class="row" style="cursor:default"><div><div class="rt">'+esc(p.original||p.titulo)+'</div><div class="ra">'+esc(p.selo)+' · '+esc(p.titulo)+' · '+(ok?'<b style="color:#3E9E6B">dados técnicos preenchidos</b>':'<span style="color:#B8862F">faltam dados técnicos</span>')+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><button class="btn" data-dt="'+p.id+'">Dados técnicos</button><button class="btn gold" data-gerardt="'+p.id+'">⬇ Gerar arquivo</button></div></div>';}).join("");
+   return '<div class="row" style="cursor:default"><div><div class="rt">'+esc(p.original||p.titulo)+'</div><div class="ra">'+esc(p.selo)+' · '+esc(p.titulo)+' · '+(ok?'<b style="color:#3E9E6B">dados técnicos preenchidos</b>':'<span style="color:#B8862F">faltam dados técnicos</span>')+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><button class="btn" data-dt="'+p.id+'">Dados técnicos</button><button class="btn" data-gerardt="'+p.id+'">⬇ Gerar arquivo</button><button class="btn gold" data-tografica="'+p.id+'">→ Enviar para Gráfica</button></div></div>';}).join("");
  return h+'</div>';
 }
 const DT_PAPEL_MIOLO=['OffSet','Pólen','Couche','Pólen Nat'];const DT_GRAM_MIOLO=['63','70','80','90','120','150'];const DT_ESCALA=['1/1','2/2','4/0','4/1','4/2','4/3','4/4'];const DT_SANG=['Sim','Não'];const DT_PAPEL_CAPA=['Cartão','Couche Brilho','Couche Fosco'];const DT_GRAM_CAPA=['250g','300g'];const DT_ACAB=['PUR','Capa dura'];const DT_LAMIN=['Fosco','Brilho','Soft Touch','Sem Laminação'];
@@ -895,7 +895,7 @@ function viewFichas(){
 }
 const VIEWS={prod:viewProd,coord:viewCoord,estudios:viewEstudios,capas:viewCapas,pg:viewPG,grafica:viewGrafica,estoque:viewEstoque,reimp:viewReimp,pagamentos:viewPagamentos,contratos:viewContratos,fichas:viewFichas,funcoes:viewFuncoes,prestadores:viewPrestadores,colecoes:viewColecoes,historico:viewHistorico,cad:viewCad};
 const TABS=[["prod","Produção"],["capas","Capas"],["pg","P&G"],["grafica","Gráfica"],["estudios","Estúdios"],["prestadores","Prestadores"],["colecoes","Coleções"],["funcoes","Funções"],["pagamentos","Pagamentos"],["contratos","Contratos"],["fichas","Ficha técnica"],["historico","Histórico"],["estoque","Estoque"],["reimp","Reimpressão"],["coord","Coordenação"],["cad","Cadastrar"]];
-function renderTabs(){$("#tabs").innerHTML=TABS.map(t=>{let n="";if(t[0]==="prod")n=prod.filter(p=>p.status!=="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="pg")n=prod.filter(p=>p.status==="P&G").length;if(t[0]==="grafica")n=prod.filter(p=>(p.local||'')==='grafica').length;if(t[0]==="estoque")n=estoque.length;return '<button class="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(n?' <span class="n">'+n+'</span>':'')+'</button>';}).join("");}
+function renderTabs(){$("#tabs").innerHTML=TABS.map(t=>{let n="";if(t[0]==="prod")n=prod.filter(p=>p.status!=="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="pg")n=prod.filter(p=>p.status==="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="grafica")n=prod.filter(p=>(p.local||'')==='grafica').length;if(t[0]==="estoque")n=estoque.length;return '<button class="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(n?' <span class="n">'+n+'</span>':'')+'</button>';}).join("");}
 function render(){renderTabs();$("#view").innerHTML=VIEWS[tab]();if(tab==="cad")fillCurOpts();renderNotif();}
 
 /* drawer editor */
@@ -1243,6 +1243,7 @@ document.body.addEventListener("click",e=>{
    else{addFuncao({...dados,status:"pendente"}).then(()=>{render();buildNotifPanel();});}
    return;}
  const te=e.target.closest("[data-toestoque]");if(te){patchProd(te.dataset.toestoque,{local:'estoque'});render();return;}
+ const tg=e.target.closest("[data-tografica]");if(tg){patchProd(tg.dataset.tografica,{local:'grafica'});render();toast("Enviado para a Gráfica.");return;}
  const es=e.target.closest("[data-est]");if(es){openEstoque(es.dataset.est);return;}
  const ri=e.target.closest("[data-reimp]");if(ri){openReimp(ri.dataset.reimp);return;}
  if(e.target.id==="addEst"){openEstoque("__new__");return;}
