@@ -128,7 +128,7 @@ label.f{display:block;font-family:var(--util);font-size:10px;letter-spacing:.1em
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .stopsedit{display:flex;flex-wrap:wrap;gap:6px}.stopsedit label{font-family:var(--util);font-size:11px;color:var(--muted);border:1px solid var(--line);padding:5px 9px;border-radius:8px;display:flex;gap:5px;align-items:center;cursor:pointer}
 .dact{position:static;margin:14px 0 0;padding:0;background:none;display:flex;gap:9px}
-.dact:last-child{position:sticky;bottom:0;margin:16px -26px -80px;padding:15px 26px;background:linear-gradient(180deg,transparent,var(--panel) 35%)}
+.dact:last-child{position:static;bottom:auto;margin:20px 0 6px;padding:16px 0 0;background:none;border-top:1px solid var(--line)}
 .empty{padding:26px 6px;font-family:var(--util);font-size:13px;color:var(--muted)}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(18px);background:#1B3322;color:#B9E3C6;border:1px solid #2C5436;font-family:var(--util);font-size:12.5px;padding:9px 16px;border-radius:22px;opacity:0;transition:.2s;z-index:70}.toast.on{opacity:1;transform:translateX(-50%)}
 .toast.err{background:#3A1A1C;color:#F6CDD0;border-color:#7A2F34;max-width:min(560px,90vw);border-radius:12px;line-height:1.45;text-align:left;padding:12px 16px}
@@ -979,14 +979,14 @@ function openEditor(id){
   await addFuncao({titulo_demanda:dsc,descricao:"",obra_id:p.id,etapa:$("#e-pend-et").value||null,atribuido_a:$("#e-pend-a").value,prazo:null,status:"pendente"});
   $("#e-pend-d").value="";render();renderPendED();};
 }
-const MAXIMG=250*1024;
+const MAXIMG=1600*1024;
 function reduzImg(dataURL, ok){
  const im=new Image();
- im.onload=()=>{const MAXLADO=900;let w=im.width,h=im.height;
+ im.onload=()=>{const MAXLADO=3000;let w=im.width,h=im.height;
   if(w>MAXLADO||h>MAXLADO){const k=Math.min(MAXLADO/w,MAXLADO/h);w=Math.round(w*k);h=Math.round(h*k);}
-  const cv=document.createElement("canvas");cv.width=w;cv.height=h;cv.getContext("2d").drawImage(im,0,0,w,h);
-  let q=0.82,out=cv.toDataURL("image/jpeg",q);
-  while(out.length>MAXIMG&&q>0.42){q-=0.1;out=cv.toDataURL("image/jpeg",q);}
+  const cv=document.createElement("canvas");cv.width=w;cv.height=h;const cx=cv.getContext("2d");cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.drawImage(im,0,0,w,h);
+  let q=0.85,out=cv.toDataURL("image/jpeg",q);
+  while(out.length>MAXIMG&&q>0.45){q-=0.07;out=cv.toDataURL("image/jpeg",q);}
   if(out.length>MAXIMG){toast("Essa imagem continua grande demais depois de reduzida. Use um arquivo menor.","err");return;}
   ok(out,w,h);};
  im.onerror=()=>toast("Não consegui abrir essa imagem.","err");
