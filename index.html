@@ -1008,9 +1008,9 @@ function openCapa(id){
   +'<label class="f">Tipo de capa</label><select id="cap-tipo" style="width:100%">'+TIPO_CAPA.map(o=>'<option '+(p.tipo_capa===o?"selected":"")+'>'+o+'</option>').join("")+'</select>'
   +((((p.capa_status||"")+(p.capa_situacao||"")).toLowerCase().includes("adquir"))?'<div class="util" style="font-size:11px;color:var(--muted);margin-top:12px">Capa adquirida — sem etapas de aprovação (Frente e Capa aberta valem só para capa original).</div>':'<label class="f">Aprovações da capa</label>'+GATES.map(g=>{const cur=((p.capa_aprovacoes||{})[g[0]])||"pendente";return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="util" style="font-size:11px;flex:1;color:var(--muted)">'+g[1]+'</span><select class="mini" data-gate="'+g[0]+'">'+GATE_ST.map(s=>'<option '+(cur===s?"selected":"")+'>'+s+'</option>').join("")+'</select></div>';}).join(""))
   +'<label class="f">Observações</label><textarea id="cap-obs" style="width:100%;min-height:70px">'+esc(p.capa_obs||"")+'</textarea>'
-  +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:6px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gc)">E-mail de negociação (capa internacional)</span></div>'
-  +'<div class="util" style="font-size:11px;color:var(--muted);margin:2px 0 6px">Gera o e-mail padrão pra editora/agência estrangeira liberar a capa. Depois clique em <b>Copiar capa</b> lá em cima e anexe/cole no e-mail.</div>'
-  +'<div class="dact" style="margin-bottom:6px"><button class="btn" id="cap-email" style="flex:1">📧 Gerar e-mail de negociação</button></div>'
+  +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:6px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gc)">E-mail de negociação de capa</span></div>'
+  +'<div class="util" style="font-size:11px;color:var(--muted);margin:2px 0 6px"><b>Internacional (EN):</b> pra editora/agência estrangeira. <b>Nacional (PT):</b> pra agência no Brasil (modelo Agência Riff). Depois clique em <b>Copiar capa</b> lá em cima e anexe/cole no e-mail.</div>'
+  +'<div class="dact" style="margin-bottom:6px;gap:6px"><button class="btn" id="cap-email" style="flex:1">📧 Internacional (EN)</button><button class="btn" id="cap-emailnac" style="flex:1">📧 Nacional (PT)</button></div>'
   +'<textarea id="cap-emailout" style="width:100%;min-height:170px;font-size:12px;display:none"></textarea>'
   +'<div class="dact" id="cap-emailact" style="display:none"><button class="btn" id="cap-emailcopy" style="flex:1">Copiar e-mail</button></div>'
   +'<div class="dact"><button class="btn gold" id="cap-save" style="flex:1">Salvar</button><button class="btn" id="cap-cancel">Fechar</button></div>';
@@ -1058,7 +1058,8 @@ function openCapa(id){
  };
  $("#cap-cropapply").onclick=()=>{if(capCropApply)capCropApply();};
  $("#cap-cropcancel").onclick=()=>capCropEnd();
- $("#cap-email").onclick=()=>{const t=$("#cap-emailout");t.value=emailNegCapa(p);t.style.display="block";$("#cap-emailact").style.display="flex";toast("E-mail gerado. Copie e anexe a capa.");};
+ $("#cap-email").onclick=()=>{const t=$("#cap-emailout");t.value=emailNegCapa(p);t.style.display="block";$("#cap-emailact").style.display="flex";toast("E-mail internacional gerado. Copie e anexe a capa.");};
+ $("#cap-emailnac").onclick=()=>{const t=$("#cap-emailout");t.value=emailNegCapaNac(p);t.style.display="block";$("#cap-emailact").style.display="flex";toast("E-mail nacional gerado. Copie e anexe a capa.");};
  $("#cap-emailcopy").onclick=()=>{copiarTexto($("#cap-emailout").value,"E-mail copiado.");};
  $("#dx").onclick=$("#cap-cancel").onclick=closeEditor;
  $("#cap-save").onclick=async()=>{const aprov={};d.querySelectorAll("[data-gate]").forEach(s=>aprov[s.dataset.gate]=s.value);const patch={capa_status:$("#cap-st").value,capa_situacao:$("#cap-sit").value,capa_da:$("#cap-da").value,capa_shutter:$("#cap-sh").value,capa_agente:$("#cap-ag").value.trim(),tipo_capa:$("#cap-tipo").value,capa_aprovacoes:aprov,capa_obs:$("#cap-obs").value.trim()};if(newimg)patch.capa_img=newimg;await patchProd(p.id,patch);render();openCapa(p.id);toast("salvo");};
@@ -1067,6 +1068,11 @@ function emailNegCapa(p){
  const nome=((meNome()||'Isabella').split(' ')[0]);const tit=p.original||p.titulo||'';
  const assunto='[COVER] '+tit+' | Alta Books Editorial Group, Brasil';
  return 'Assunto: '+assunto+'\n\nHi,\n\nI hope this email finds you well.\n\nMy name is '+nome+", I'm the editorial producer for the Brazilian edition of "+tit+".\nWe've acquired the Brazilian rights for the book and we would like to clear the rights for the cover design as well.\n\nCould you kindly provide us with information regarding the fee for these rights and any third-party images or elements used in the design?\n\nThis is the cover in question: (anexe/cole a imagem — use \"Copiar capa\" acima)\n\nBest,\n"+nome;
+}
+function emailNegCapaNac(p){
+ const tit=p.original||p.titulo||'';
+ const assunto='[DIREITOS DE CAPA] '+tit+' | ALTA BOOKS';
+ return 'Assunto: '+assunto+'\n\nOlá, Roberto e JP,\nTudo bem?\n\nEstou entrando em contato porque adquirimos os direitos de publicação de '+tit+' e gostaríamos de tratar também dos direitos da capa.\n\nVocês podem nos passar as informações sobre o valor para liberação desses direitos, ou nos indicar o contato de quem cuida disso na editora original dessa obra?\n\nSegue a capa a que me refiro. (anexe/cole a imagem — use "Copiar capa" acima)\n\nObrigada!\nAbraço.';
 }
 function msgInicioProd(p){
  const col=(p.colecao&&p.colecao!=='Não'&&p.colecao!=='Sim')?p.colecao:'N.A.';
