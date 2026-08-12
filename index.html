@@ -255,7 +255,14 @@ const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
 let prod=[],estoque=[],reimp=[],tab="prod",filt={sel:"all",q:"",mine:false,prio:false,venc:false},collapsed={},prodLoadOk=false;
-let funcView="lista",calRef=0,calWho="todos";
+let funcView="lista",calRef=0,calWho="todos",funcSort="prazo";
+function sortFuncs(a,b){
+ if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
+ if(funcSort==="prioridade"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (ob?prioEff(ob):-1)-(oa?prioEff(oa):-1);}
+ if(funcSort==="obra"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (((oa&&oa.titulo)||'zzz')).localeCompare(((ob&&ob.titulo)||'zzz'),'pt-BR');}
+ if(funcSort==="titulo"){return String(a.titulo_demanda||'').localeCompare(String(b.titulo_demanda||''),'pt-BR');}
+ return 0;
+}
 const $=s=>document.querySelector(s);
 const esc=s=>(s==null?"":String(s)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 const uid=()=>"id"+Math.abs(Date.now()+Math.floor(Math.random()*1e6)).toString(36);
@@ -398,7 +405,7 @@ function viewGrafica(){
  const items=prod.filter(p=>p.local==='grafica');
  if(!items.length)return '<div class="empty">Nenhum livro na gráfica. Abra um título na aba <b>Produção</b> e mude o campo <b>Local</b> para <b>Gráfica</b> — ele aparece aqui, e você marca <b>→ Estoque</b> quando chegar.</div>';
  let h='<div class="selogroup" style="--gc:#3A3340"><div class="selohead" style="background:#3A3340"><span class="sn">Na gráfica</span><span class="cnt">'+items.length+' títulos</span></div>';
- h+=items.map(p=>'<div class="row" style="cursor:default"><div><div class="rt">'+esc(p.titulo)+'</div><div class="ra">'+esc(p.selo)+' · '+esc(p.original||"")+'</div></div><div style="text-align:right"><button class="btn gold" data-toestoque="'+p.id+'">→ Enviar para Estoque</button></div></div>').join("");
+ h+=items.map(p=>'<div class="row" style="cursor:default"><div><div class="rt">'+esc(p.titulo)+'</div><div class="ra">'+esc(p.selo)+' · '+esc(p.original||"")+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap"><button class="btn" data-open="'+p.id+'">📖 Abrir cadastro</button><button class="btn gold" data-toestoque="'+p.id+'">→ Enviar para Estoque</button></div></div>').join("");
  return h+'</div>';
 }
 
@@ -770,8 +777,9 @@ function viewFuncoes(){
  const minhas=abertas.filter(f=>f.atribuido_a===eu);
  let h='<div class="controls"><button class="chip" aria-pressed="'+(funcView==="lista")+'" data-funcview="lista">Lista</button><button class="chip" aria-pressed="'+(funcView==="cal")+'" data-funcview="cal">📅 Calendário</button></div>';
  if(funcView==="cal")return h+viewFuncoesCal();
+ h+='<div class="controls" style="margin-top:6px;align-items:center"><span class="util" style="font-size:11px;color:var(--muted)">Ordenar por:</span><select id="funcsort" style="width:auto;padding:4px 8px">'+[['prazo','Prazo (mais próximo)'],['prioridade','Prioridade da obra'],['obra','Obra (A–Z)'],['titulo','Título da demanda']].map(o=>'<option value="'+o[0]+'"'+(funcSort===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>';
  h+='<div class="util" style="font-size:12px;color:var(--muted);margin:8px 2px 12px">Para <b>criar ou editar</b> demandas, use o botão <b>📋 Funções</b> no topo do painel. Aqui você acompanha e conclui.</div>';
- h+='<div class="selogroup" style="margin-top:6px"><div class="selohead" style="background:#2E5A3E"><span class="sn">Minhas pendências</span><span class="cnt">'+minhas.length+'</span></div>'+(minhas.map(funcCard).join("")||'<div class="empty">Nada atribuído a você.</div>')+'</div>';
+ h+='<div class="selogroup" style="margin-top:6px"><div class="selohead" style="background:#2E5A3E"><span class="sn">Minhas pendências</span><span class="cnt">'+minhas.length+'</span></div>'+(minhas.slice().sort(sortFuncs).map(funcCard).join("")||'<div class="empty">Nada atribuído a você.</div>')+'</div>';
  const comObra=abertas.filter(f=>f.obra_id&&obraDe(f.obra_id));
  const byObra={};comObra.forEach(f=>{(byObra[f.obra_id]=byObra[f.obra_id]||[]).push(f);});
  const obraIds=Object.keys(byObra).sort((a,b)=>(prioEff(obraDe(b))||0)-(prioEff(obraDe(a))||0));
@@ -779,9 +787,9 @@ function viewFuncoes(){
  if(!obraIds.length)h+='<div class="empty">Nenhuma pendência vinculada a obra. Crie acima escolhendo a obra, ou abra uma obra e use "Pendências desta obra".</div>';
  h+=obraIds.map(id=>{const ob=obraDe(id);const its=byObra[id];const c=cfg(ob.selo);
    return '<div class="selogroup"><div class="selohead" data-collapse="pend:'+id+'" style="background:'+c.c+';cursor:pointer"><span class="sn">'+esc(ob.titulo)+'</span><span class="cnt">'+esc(ob.selo)+' · '+its.length+' pendência'+(its.length>1?'s':'')+' <span style="margin-left:6px;display:inline-block;transform:rotate('+(collapsed['pend:'+id]?'-90deg':'0deg')+')">▾</span></span></div>'
-    +(collapsed['pend:'+id]?'':its.map(funcCard).join(""))+'</div>';}).join("")+'</div>';
+    +(collapsed['pend:'+id]?'':its.slice().sort(sortFuncs).map(funcCard).join(""))+'</div>';}).join("")+'</div>';
  const gerais=abertas.filter(f=>!f.obra_id);
- h+='<div class="selogroup" style="margin-top:16px"><div class="selohead" style="background:#3A3340"><span class="sn">Demandas gerais</span><span class="cnt">'+gerais.length+'</span></div>'+(gerais.map(funcCard).join("")||'<div class="empty">Sem demandas gerais.</div>')+'</div>';
+ h+='<div class="selogroup" style="margin-top:16px"><div class="selohead" style="background:#3A3340"><span class="sn">Demandas gerais</span><span class="cnt">'+gerais.length+'</span></div>'+(gerais.slice().sort(sortFuncs).map(funcCard).join("")||'<div class="empty">Sem demandas gerais.</div>')+'</div>';
  const feitas=funcoes.filter(f=>f.status==='feito');
  if(feitas.length)h+='<div class="selogroup" style="margin-top:16px"><div class="selohead" data-collapse="pend:feitas" style="background:#5a5a5a;cursor:pointer"><span class="sn">Concluídas</span><span class="cnt">'+feitas.length+' <span style="display:inline-block;transform:rotate('+(collapsed['pend:feitas']?'-90deg':'0deg')+')">▾</span></span></div>'+(collapsed['pend:feitas']?'':feitas.map(funcCard).join(""))+'</div>';
  return h;
@@ -825,7 +833,7 @@ function viewPG(){
  if(!items.length)return h+'<div class="empty">Nenhum livro em P&G no momento.</div>';
  h+='<div class="selogroup" style="--gc:#5A0F22"><div class="selohead" style="background:#5A0F22"><span class="sn">Pré-Gráfica · P&G</span><span class="cnt">'+items.length+' títulos</span></div>';
  h+=items.map(p=>{const dt=p.dados_tecnicos||{};const ok=(dt.capa&&dt.capa.formato&&dt.miolo&&dt.miolo.paginacao);
-   return '<div class="row" style="cursor:default"><div><div class="rt">'+esc(p.original||p.titulo)+'</div><div class="ra">'+esc(p.selo)+' · '+esc(p.titulo)+' · '+(ok?'<b style="color:#3E9E6B">dados técnicos preenchidos</b>':'<span style="color:#B8862F">faltam dados técnicos</span>')+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;align-items:center"><button class="btn" data-dt="'+p.id+'">Dados técnicos</button><button class="btn" data-gerardt="'+p.id+'">⬇ Gerar arquivo</button><button class="btn gold" data-tografica="'+p.id+'">→ Enviar para Gráfica</button></div></div>';}).join("");
+   return '<div class="row" style="cursor:default"><div><div class="rt">'+esc(p.original||p.titulo)+'</div><div class="ra">'+esc(p.selo)+' · '+esc(p.titulo)+' · '+(ok?'<b style="color:#3E9E6B">dados técnicos preenchidos</b>':'<span style="color:#B8862F">faltam dados técnicos</span>')+'</div></div><div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap"><button class="btn" data-open="'+p.id+'">📖 Abrir cadastro</button><button class="btn" data-dt="'+p.id+'">Dados técnicos</button><button class="btn" data-gerardt="'+p.id+'">⬇ Gerar arquivo</button><button class="btn gold" data-tografica="'+p.id+'">→ Enviar para Gráfica</button></div></div>';}).join("");
  return h+'</div>';
 }
 const DT_PAPEL_MIOLO=['OffSet','Pólen','Couche','Pólen Nat'];const DT_GRAM_MIOLO=['63','70','80','90','120','150'];const DT_ESCALA=['1/1','2/2','4/0','4/1','4/2','4/3','4/4'];const DT_SANG=['Sim','Não'];const DT_PAPEL_CAPA=['Cartão','Couche Brilho','Couche Fosco'];const DT_GRAM_CAPA=['250g','300g'];const DT_ACAB=['PUR','Capa dura'];const DT_LAMIN=['Fosco','Brilho','Soft Touch','Sem Laminação'];
@@ -1118,11 +1126,22 @@ async function addReimp(o){o.id=uid();reimp.unshift(o);
  if(MODE==="live"){if(!await sbW(sb.from("reimpressoes").insert(o))){reimp=reimp.filter(x=>x.id!==o.id);render();return false}await loadLive();}
  else demoSave();
  toast();return true;}
-function openEstoque(id){const e=estoque.find(x=>x.id===id)||{_new:true,selo:SELOS[0]};const d=$("#drawer");
+function temColEst(c){return !(estoque&&estoque.length)||Object.prototype.hasOwnProperty.call(estoque[0],c);}
+function openEstoque(id){const e=estoque.find(x=>x.id===id)||{_new:true,selo:SELOS[0]};const d=$("#drawer");d.onpaste=null;let esimg=null;
  const F=[["titulo","Título (BR)"],["original","Título original"],["autores","Autores"],["formato","Formato / paginação"],["isbn_fisico","ISBN físico"],["isbn_digital","ISBN digital"],["estudio","Estúdio"],["trad","Tradução"],["copi","Copidesque"],["dtp","Diagramação"],["rg","RG / Leitura crítica"],["data_entrada","Entrada no estoque"],["ano","Ano"]];
- d.innerHTML='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Estoque</div><h3>'+esc(e.titulo||"Novo título")+'</h3><label class="f">Selo</label><select id="es-selo" style="width:100%">'+SELOS.map(s=>'<option '+(e.selo===s?"selected":"")+'>'+s+'</option>').join("")+'</select>'+F.map(f=>'<label class="f">'+f[1]+'</label><input type="text" id="es-'+f[0]+'" value="'+esc(e[f[0]]||"")+'" style="width:100%">').join("")+'<div class="dact"><button class="btn gold" id="es-save" style="flex:1">Salvar</button><button class="btn" id="es-cancel">Fechar</button></div>';
+ d.innerHTML='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Estoque · cadastro completo</div><h3>'+esc(e.titulo||"Novo título")+'</h3>'
+  +'<label class="f">Selo</label><select id="es-selo" style="width:100%">'+SELOS.map(s=>'<option '+(e.selo===s?"selected":"")+'>'+s+'</option>').join("")+'</select>'
+  +'<label class="f">Coleção</label><input type="text" list="dl-col-est" id="es-colecao" value="'+esc(e.colecao||"")+'" placeholder="nome da coleção (ou digite uma nova) — use pra ligar novos volumes" style="width:100%"><datalist id="dl-col-est">'+nomesColecoes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
+  +F.map(f=>'<label class="f">'+f[1]+'</label><input type="text" id="es-'+f[0]+'" value="'+esc(e[f[0]]||"")+'" style="width:100%">').join("")
+  +'<label class="f">Imagem da capa</label><div id="es-capprev" style="height:210px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--util);font-size:12px">'+(e.capa_img?'<img src="'+e.capa_img+'" style="width:100%;height:100%;object-fit:contain">':'sem imagem — arraste, cole (Ctrl+V) ou escolha um arquivo')+'</div>'
+  +'<input type="file" id="es-capfile" accept="image/*" class="util" style="width:100%;font-size:12px;margin-top:8px">'
+  +'<div class="dact"><button class="btn gold" id="es-save" style="flex:1">Salvar</button><button class="btn" id="es-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");$("#dx").onclick=$("#es-cancel").onclick=closeEditor;
- $("#es-save").onclick=async()=>{const patch={selo:$("#es-selo").value};F.forEach(f=>patch[f[0]]=$("#es-"+f[0]).value.trim());if(e._new)await addEstoque(patch);else await patchEstoque(id,patch);closeEditor();render();};}
+ const setP=(out)=>{esimg=out;$("#es-capprev").innerHTML='<img src="'+out+'" style="width:100%;height:100%;object-fit:contain">';toast("Capa reduzida para "+Math.round(out.length/1024)+" KB");};
+ $("#es-capfile").onchange=ev=>{const fl=ev.target.files[0];if(!fl)return;const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,setP);rd.readAsDataURL(fl);};
+ d.onpaste=ev=>{const items=(ev.clipboardData||{}).items||[];for(const it of items){if(it.type&&it.type.indexOf("image")===0){const fl=it.getAsFile();if(!fl)continue;const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,setP);rd.readAsDataURL(fl);ev.preventDefault();break;}}};
+ const pv=$("#es-capprev");pv.ondragover=ev=>{ev.preventDefault();pv.style.outline="2px dashed #7ad";};pv.ondragleave=()=>{pv.style.outline="";};pv.ondrop=ev=>{ev.preventDefault();pv.style.outline="";const fl=(ev.dataTransfer&&ev.dataTransfer.files||[])[0];if(fl&&fl.type&&fl.type.indexOf("image")===0){const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,setP);rd.readAsDataURL(fl);}};
+ $("#es-save").onclick=async()=>{const patch={selo:$("#es-selo").value};F.forEach(f=>patch[f[0]]=$("#es-"+f[0]).value.trim());if(temColEst('colecao'))patch.colecao=$("#es-colecao").value.trim();if(esimg&&temColEst('capa_img'))patch.capa_img=esimg;if(e._new)await addEstoque(patch);else await patchEstoque(id,patch);closeEditor();render();};}
 function openReimp(id){const r=reimp.find(x=>x.id===id)||{_new:true,selo:SELOS[0]};const d=$("#drawer");
  const F=[["titulo","Título"],["n","Nº da reimpressão"],["acabamento","Acabamento"],["formato","Formato"],["novo_isbn","Novo ISBN"],["lote","Lote"],["status","Status"]];
  d.innerHTML='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Reimpressão</div><h3>'+esc(r.titulo||"Nova reimpressão")+'</h3><label class="f">Selo</label><select id="ri-selo" style="width:100%">'+SELOS.map(s=>'<option '+(r.selo===s?"selected":"")+'>'+s+'</option>').join("")+'</select>'+F.map(f=>'<label class="f">'+f[1]+'</label><input type="text" id="ri-'+f[0]+'" value="'+esc(r[f[0]]||"")+'" style="width:100%">').join("")+'<div class="dact"><button class="btn gold" id="ri-save" style="flex:1">Salvar</button><button class="btn" id="ri-cancel">Fechar</button></div>';
@@ -1297,6 +1316,7 @@ document.body.addEventListener("input",e=>{
  if(tab==="estoque")$("#view").innerHTML=viewEstoque();else if(tab==="capas")$("#view").innerHTML=viewCapas();else if(tab==="reimp")$("#view").innerHTML=viewReimp();
  const qi=document.getElementById("q");if(qi){const v=qi.value;qi.focus();try{qi.setSelectionRange(v.length,v.length)}catch(_){}}}});
 document.body.addEventListener("change",e=>{
+ if(e.target.id==="funcsort"){funcSort=e.target.value;$("#view").innerHTML=viewFuncoes();return;}
  const fc=e.target.closest("[data-func]");if(fc){patchFuncao(fc.dataset.func,{status:fc.checked?"feito":"pendente"});render();return;}
  const nc=e.target.closest("[data-notif]");if(nc){patchNotif(nc.dataset.notif,{feito:nc.checked});renderNotif();return;}
  const il=e.target.closest("[data-inline]");if(il){let v=il.value;if(il.dataset.inline==="prioridade")v=parseInt(v,10);patchProd(il.dataset.id,{[il.dataset.inline]:v});const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
