@@ -94,6 +94,10 @@ input[type=search]{min-width:200px;flex:1 1 200px}
 .inline select{font-family:var(--util);font-size:10px;padding:3px 5px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text)}
 .pz{font-family:var(--util);font-size:9px;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid;white-space:nowrap;display:inline-block;vertical-align:middle}
 .pz.ok{color:#3E9E6B;border-color:#3E9E6B} .pz.warn{color:#B8862F;border-color:#B8862F;background:rgba(184,134,47,.1)} .pz.late{color:#C21F4A;border-color:#C21F4A;background:rgba(194,31,74,.1)}
+.obshov{display:flex;gap:6px;align-items:flex-start;margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
+.obshov .obsic{font-size:12px;line-height:24px;opacity:.55;flex:none}
+.obsedit{flex:1;height:24px;min-height:24px;overflow:hidden;border:1px solid transparent;border-radius:8px;background:transparent;font-family:var(--util);font-size:11px;color:var(--muted);padding:3px 7px;box-sizing:border-box;resize:none;transition:height .15s,background .15s,border-color .15s,color .15s}
+.row:hover .obsedit,.obsedit:focus{height:74px;overflow:auto;border-color:var(--line);background:var(--panel);color:inherit;resize:vertical;outline:none}
 .npanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);width:min(580px,94vw);max-height:86vh;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:55;display:flex;flex-direction:column}
 .npanel.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
 .nphead{display:flex;align-items:center;justify-content:space-between;padding:16px 14px;font-family:var(--serif);font-size:18px;border-bottom:1px solid var(--line)}
@@ -384,6 +388,7 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  +'<div style="margin:13px 0">'+trilha(p)+inl+'</div>'
  +'<div class="rfoot" style="font-size:12px;gap:8px;margin-top:'+(prodCols===2?'auto':'10px')+(prodCols===2?';padding-top:10px':'')+'"><span class="dp '+esc(p.dono)+'" style="font-size:12px;padding:4px 11px">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
  +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'</div>'
+ +'<div class="obshov" onclick="event.stopPropagation()"><span class="obsic" title="Observações da obra">📝</span><textarea class="obsedit" data-obsid="'+p.id+'" placeholder="Observações — passe o mouse para editar…">'+esc(p.obs||'')+'</textarea></div>'
  +'</div></div>';}
 
 function prodListHTML(){
@@ -1629,6 +1634,7 @@ document.body.addEventListener("change",e=>{
  if(e.target.id==="funcsort"){funcSort=e.target.value;$("#view").innerHTML=viewFuncoes();return;}
  const fc=e.target.closest("[data-func]");if(fc){patchFuncao(fc.dataset.func,{status:fc.checked?"feito":"pendente"});render();return;}
  const nc=e.target.closest("[data-notif]");if(nc){patchNotif(nc.dataset.notif,{feito:nc.checked});renderNotif();return;}
+ const ob=e.target.closest(".obsedit");if(ob&&ob.dataset.obsid){patchProd(ob.dataset.obsid,{obs:ob.value.trim()});toast("Observação salva.");return;}
  const il=e.target.closest("[data-inline]");if(il){let v=il.value;if(il.dataset.inline==="prioridade")v=parseInt(v,10);patchProd(il.dataset.id,{[il.dataset.inline]:v});const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  const co=e.target.closest("[data-co]");if(co){let v=co.value;if(co.dataset.co==="prioridade")v=parseInt(v,10);if(co.dataset.co==="prazo"&&!v)v=null;patchProd(co.dataset.id,{[co.dataset.co]:v});return;}
  if(e.target.id==="c-selo")fillCurOpts();
