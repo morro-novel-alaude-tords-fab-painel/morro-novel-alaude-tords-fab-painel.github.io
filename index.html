@@ -1172,7 +1172,9 @@ function openEditor(id){
   +'<div class="util" style="font-size:11px;color:var(--muted);margin:-2px 0 6px">O que falta para destravar a obra. Aparecem na aba Funções e como 📌 na lista de Produção.</div>'
   +'<div id="e-pendlist" style="margin:4px 0 8px"></div>'
   +'<div class="grid2"><input type="text" id="e-pend-d" placeholder="nova pendência (ex.: aguardando comentários p/ liberar revisão)" style="width:100%"><select id="e-pend-et" style="width:100%"><option value="">— etapa —</option>'+ETAPAS_PEND.map(x=>'<option value="'+x[0]+'">'+x[1]+'</option>').join("")+'</select></div>'
-  +'<div class="grid2" style="margin-top:6px"><select id="e-pend-a" style="width:100%">'+PESSOAS.map(x=>'<option '+(x===meNome()?"selected":"")+'>'+x+'</option>').join("")+'</select><button class="btn" id="e-pend-add" style="width:100%">+ Adicionar pendência</button></div>'
+  +'<div class="util" style="font-size:10px;color:var(--muted);margin:6px 0 2px">Responsável · prazo (opcional)</div>'
+  +'<div class="grid2"><select id="e-pend-a" style="width:100%">'+PESSOAS.map(x=>'<option '+(x===meNome()?"selected":"")+'>'+x+'</option>').join("")+'</select><input type="date" id="e-pend-p" title="Prazo da pendência (opcional)" style="width:100%"></div>'
+  +'<button class="btn" id="e-pend-add" style="width:100%;margin-top:6px">+ Adicionar pendência</button>'
   +'<label class="f">Observações</label><textarea id="e-obs" style="width:100%;min-height:90px">'+esc(p.obs||"")+'</textarea>'
   +'<div class="dact"><button class="btn gold" id="e-save" style="flex:1">Salvar</button><button class="btn" id="e-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");
@@ -1194,8 +1196,8 @@ function openEditor(id){
   box.querySelectorAll("[data-epdel]").forEach(b=>b.onclick=async()=>{await delFuncao(b.dataset.epdel);renderPendED();});}
  renderPendED();
  $("#e-pend-add").onclick=async()=>{const dsc=$("#e-pend-d").value.trim();if(!dsc){$("#e-pend-d").focus();return;}
-  await addFuncao({titulo_demanda:dsc,descricao:"",obra_id:p.id,etapa:$("#e-pend-et").value||null,atribuido_a:$("#e-pend-a").value,prazo:null,status:"pendente"});
-  $("#e-pend-d").value="";render();renderPendED();};
+  await addFuncao({titulo_demanda:dsc,descricao:"",obra_id:p.id,etapa:$("#e-pend-et").value||null,atribuido_a:$("#e-pend-a").value,prazo:($("#e-pend-p")?$("#e-pend-p").value||null:null),status:"pendente"});
+  $("#e-pend-d").value="";if($("#e-pend-p"))$("#e-pend-p").value="";render();renderPendED();};
 }
 const MAXIMG=1600*1024;
 function reduzImg(dataURL, ok){
