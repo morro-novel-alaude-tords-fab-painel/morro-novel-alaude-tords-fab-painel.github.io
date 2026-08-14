@@ -75,7 +75,7 @@ input[type=search]{min-width:200px;flex:1 1 200px}
 .row:hover{background:var(--panel2)}
 .rt{font-size:16px}.ra{font-family:var(--util);font-size:11px;color:var(--muted);margin-top:2px}
 .rfoot{font-family:var(--util);font-size:10px;color:var(--muted);margin-top:5px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
-.pill{font-family:var(--util);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--gc);border:1px solid var(--gc);border-radius:20px;padding:2px 8px;margin-left:8px}
+.pill{font-family:var(--util);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--gc);border:1px solid var(--gc);border-radius:20px;padding:2px 8px;margin-left:8px;white-space:nowrap;display:inline-block;vertical-align:middle}
 .dp{display:inline-block;font-family:var(--util);font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--muted)}
 .dp.Luana{color:#2A7DBF;border-color:#2A7DBF;background:rgba(42,125,191,.1)}
 .dp.Isabella{color:#B8632F;border-color:#B8632F;background:rgba(184,99,47,.1)}
@@ -84,15 +84,15 @@ input[type=search]{min-width:200px;flex:1 1 200px}
 .stop.done i{background:#3E9E6B}.stop.cur i{background:var(--gc)}
 .stop span{font-family:var(--util);font-size:8px;text-transform:uppercase;color:var(--muted);margin-top:3px;display:block}.stop.cur span{color:var(--gc)}
 .stop .who2{display:block;font-family:var(--util);font-size:8px;color:var(--text);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46px}
-.prio{font-family:var(--util);font-size:9px;letter-spacing:.05em;text-transform:uppercase;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid}
+.prio{font-family:var(--util);font-size:9px;letter-spacing:.05em;text-transform:uppercase;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid;white-space:nowrap;display:inline-block;vertical-align:middle}
 .prio.p1{color:var(--muted);border-color:var(--line)} .prio.p2{color:#B8862F;border-color:#B8862F;background:rgba(184,134,47,.1)} .prio.p3{color:#C21F4A;border-color:#C21F4A;background:rgba(194,31,74,.1)}
-.dir{font-family:var(--util);font-size:9px;letter-spacing:.04em;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid #2A7DBF;color:#2A7DBF;background:rgba(42,125,191,.08)}
+.dir{font-family:var(--util);font-size:9px;letter-spacing:.04em;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid #2A7DBF;color:#2A7DBF;background:rgba(42,125,191,.08);white-space:nowrap;display:inline-block;vertical-align:middle}
 .bloq{display:inline-block;font-family:var(--util);font-size:11px;color:#C21F4A;background:rgba(194,31,74,.08);border:1px solid rgba(194,31,74,.35);border-radius:6px;padding:3px 9px;margin-top:6px}
 .row.hasbloq{box-shadow:inset 3px 0 0 #C21F4A}
 .disc{font-family:var(--util);font-size:10px;color:#5865F2;text-decoration:none;border:1px solid rgba(88,101,242,.4);border-radius:20px;padding:2px 8px}
 .inline{display:flex;gap:5px;margin-top:7px}
 .inline select{font-family:var(--util);font-size:10px;padding:3px 5px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text)}
-.pz{font-family:var(--util);font-size:9px;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid}
+.pz{font-family:var(--util);font-size:9px;border-radius:20px;padding:2px 8px;margin-left:8px;border:1px solid;white-space:nowrap;display:inline-block;vertical-align:middle}
 .pz.ok{color:#3E9E6B;border-color:#3E9E6B} .pz.warn{color:#B8862F;border-color:#B8862F;background:rgba(184,134,47,.1)} .pz.late{color:#C21F4A;border-color:#C21F4A;background:rgba(194,31,74,.1)}
 .npanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);width:min(580px,94vw);max-height:86vh;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:55;display:flex;flex-direction:column}
 .npanel.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
@@ -1096,14 +1096,56 @@ function reduzImg(dataURL, ok){
  im.onerror=()=>toast("Não consegui abrir essa imagem.","err");
  im.src=dataURL;
 }
+// ---- PDF -> imagem no nosso padrão (3000px, comprimido) ----
+let _pdfjsLoading=null;
+function ensurePdfJs(){
+ if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+ if(_pdfjsLoading)return _pdfjsLoading;
+ _pdfjsLoading=new Promise((res,rej)=>{
+  const s=document.createElement("script");
+  s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+  s.onload=()=>{try{if(window.pdfjsLib&&window.pdfjsLib.GlobalWorkerOptions)window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";res(window.pdfjsLib);}catch(e){rej(e);}};
+  s.onerror=()=>{_pdfjsLoading=null;rej(new Error("Não consegui carregar o conversor de PDF (sem internet?)."));};
+  document.head.appendChild(s);
+ });
+ return _pdfjsLoading;
+}
+function pdfToImg(file, ok){
+ toast("Convertendo PDF em imagem…");
+ ensurePdfJs().then(pdfjsLib=>{
+  const rd=new FileReader();
+  rd.onload=()=>{
+   let data;try{data=new Uint8Array(rd.result);}catch(e){toast("Não consegui ler esse PDF.","err");return;}
+   pdfjsLib.getDocument({data:data}).promise.then(pdf=>pdf.getPage(1).then(page=>{
+    const vp1=page.getViewport({scale:1});
+    const alvo=3000,maior=Math.max(vp1.width,vp1.height)||1;
+    let scale=alvo/maior;if(!isFinite(scale)||scale<=0)scale=1;if(scale>5)scale=5;
+    const vp=page.getViewport({scale:scale});
+    const cv=document.createElement("canvas");cv.width=Math.max(1,Math.round(vp.width));cv.height=Math.max(1,Math.round(vp.height));
+    const cx=cv.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,cv.width,cv.height);
+    return page.render({canvasContext:cx,viewport:vp}).promise.then(()=>{reduzImg(cv.toDataURL("image/jpeg",0.92), ok);});
+   })).catch(()=>toast("Não consegui converter esse PDF em imagem.","err"));
+  };
+  rd.onerror=()=>toast("Não consegui ler esse PDF.","err");
+  rd.readAsArrayBuffer(file);
+ }).catch(e=>toast((e&&e.message)||"Falha ao carregar o conversor de PDF.","err"));
+}
+// Aceita imagem OU pdf; normaliza sempre pro nosso padrão via reduzImg
+function capaFromFile(file, ok){
+ if(!file)return;
+ const isPdf=(file.type&&file.type.toLowerCase().indexOf("pdf")>=0)||/\.pdf$/i.test(file.name||"");
+ if(isPdf){pdfToImg(file, ok);return;}
+ const rd=new FileReader();rd.onload=()=>reduzImg(rd.result, ok);rd.readAsDataURL(file);
+}
+function ehCapaFile(fl){return !!(fl&&((fl.type&&(fl.type.indexOf("image")===0||fl.type.toLowerCase().indexOf("pdf")>=0))||/\.pdf$/i.test(fl.name||"")));}
 function openCapa(id){
  const p=prod.find(x=>x.id===id);if(!p)return;const c=cfg(p.selo);const d=$("#drawer");
  d.innerHTML='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Capa · '+esc(p.selo)+'</div><h3>'+esc(p.titulo)+'</h3>'
   +'<label class="f">Imagem da capa</label>'
   +'<div id="capprev" style="height:280px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--util);font-size:12px">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:contain">':'sem imagem — arraste, cole (Ctrl+V) ou escolha um arquivo')+'</div>'
-  +'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="file" id="capfile" accept="image/*" class="util" style="flex:1;font-size:12px"><button class="btn" id="cap-crop" style="padding:3px 10px;white-space:nowrap">✂ Cortar frente</button><button class="btn" id="cap-copy" style="padding:3px 10px;white-space:nowrap">📋 Copiar capa</button></div>'
+  +'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="file" id="capfile" accept="image/*,application/pdf,.pdf" class="util" style="flex:1;font-size:12px"><button class="btn" id="cap-crop" style="padding:3px 10px;white-space:nowrap">✂ Cortar frente</button><button class="btn" id="cap-copy" style="padding:3px 10px;white-space:nowrap">📋 Copiar capa</button></div>'
   +'<div class="dact" id="cap-cropact" style="display:none;margin-top:6px"><button class="btn gold" id="cap-cropapply" style="flex:1">Aplicar corte</button><button class="btn" id="cap-cropcancel">Cancelar</button></div>'
-  +'<div class="util" style="font-size:11px;color:var(--muted);margin-top:4px">Arraste uma imagem pra cima, cole com Ctrl+V, ou escolha o arquivo. <b>✂ Cortar frente</b>: pra capa aberta, ajuste o quadro na frente e aplique. <b>Copiar capa</b> copia a imagem pro e-mail.</div>'
+  +'<div class="util" style="font-size:11px;color:var(--muted);margin-top:4px">Arraste uma imagem <b>ou PDF</b> pra cima, cole com Ctrl+V, ou escolha o arquivo. PDF vira imagem no nosso padrão (até 3000px). <b>✂ Cortar frente</b>: pra capa aberta, ajuste o quadro na frente e aplique. <b>Copiar capa</b> copia a imagem pro e-mail.</div>'
   +'<label class="f">Status no painel (como aparece na Produção)</label><select id="cap-stman" style="width:100%"><option value=""'+(!p.capa_status_manual?" selected":"")+'>Automático (pelo tipo / aprovações)</option>'+['A definir','Em produção','Em aprovação','Pronta','Pronta - Em aprovação','Aprovada'].map(o=>'<option '+(p.capa_status_manual===o?"selected":"")+'>'+o+'</option>').join("")+'</select><div class="util" style="font-size:11px;color:var(--muted);margin-top:2px">Deixe em "Automático" pra calcular sozinho, ou fixe um status aqui.</div>'
   +'<div class="grid2"><div><label class="f">Status da capa (negociação)</label><select id="cap-st" style="width:100%">'+CAPA_STATUS.map(o=>'<option '+(p.capa_status===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Situação (produção)</label><select id="cap-sit" style="width:100%">'+CAPA_SIT.map(o=>'<option '+(p.capa_situacao===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
@@ -1123,12 +1165,12 @@ function openCapa(id){
   +'<div class="dact"><button class="btn gold" id="cap-save" style="flex:1">Salvar</button><button class="btn" id="cap-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");let newimg=null;
  const setPrev=(out,msg)=>{newimg=out;$("#capprev").innerHTML='<img src="'+newimg+'" style="width:100%;height:100%;object-fit:contain">';toast(msg+Math.round(out.length/1024)+" KB");};
- $("#capfile").onchange=ev=>{const fl=ev.target.files[0];if(!fl)return;const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,(out)=>setPrev(out,"Capa reduzida para "));rd.readAsDataURL(fl);};
+ $("#capfile").onchange=ev=>{const fl=ev.target.files[0];if(!fl)return;capaFromFile(fl,(out)=>setPrev(out,"Capa reduzida para "));};
  d.onpaste=ev=>{const items=(ev.clipboardData||{}).items||[];for(const it of items){if(it.type&&it.type.indexOf("image")===0){const fl=it.getAsFile();if(!fl)continue;const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,(out)=>setPrev(out,"Capa colada e reduzida para "));rd.readAsDataURL(fl);ev.preventDefault();break;}}};
  const pv=$("#capprev");
  pv.ondragover=ev=>{ev.preventDefault();pv.style.outline="2px dashed #7ad";};
  pv.ondragleave=()=>{pv.style.outline="";};
- pv.ondrop=ev=>{ev.preventDefault();pv.style.outline="";const fl=(ev.dataTransfer&&ev.dataTransfer.files||[])[0];if(fl&&fl.type&&fl.type.indexOf("image")===0){const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,(out)=>setPrev(out,"Capa solta e reduzida para "));rd.readAsDataURL(fl);}};
+ pv.ondrop=ev=>{ev.preventDefault();pv.style.outline="";const fl=(ev.dataTransfer&&ev.dataTransfer.files||[])[0];if(ehCapaFile(fl)){capaFromFile(fl,(out)=>setPrev(out,"Capa solta e reduzida para "));}};
  $("#cap-copy").onclick=()=>{const src=newimg||p.capa_img;if(!src){toast("Não há imagem de capa pra copiar.","err");return;}copiarImagemCapa(src);};
  let capCropApply=null;
  function capCropEnd(){const pv2=$("#capprev");if(!pv2)return;pv2.style.position="";const src=newimg||p.capa_img;pv2.innerHTML=src?'<img src="'+src+'" style="width:100%;height:100%;object-fit:contain">':'sem imagem — arraste, cole (Ctrl+V) ou escolha um arquivo';capCropApply=null;const ca=$("#cap-cropact");if(ca)ca.style.display="none";const cb=$("#cap-crop");if(cb)cb.style.display="";}
@@ -1232,13 +1274,13 @@ function openEstoque(id){const e=estoque.find(x=>x.id===id)||{_new:true,selo:SEL
   +'<label class="f">Coleção</label><input type="text" list="dl-col-est" id="es-colecao" value="'+esc(e.colecao||"")+'" placeholder="nome da coleção (ou digite uma nova) — use pra ligar novos volumes" style="width:100%"><datalist id="dl-col-est">'+nomesColecoes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
   +F.map(f=>'<label class="f">'+f[1]+'</label><input type="text" id="es-'+f[0]+'" value="'+esc(e[f[0]]||"")+'" style="width:100%">').join("")
   +'<label class="f">Imagem da capa</label><div id="es-capprev" style="height:210px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#111;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--util);font-size:12px">'+(e.capa_img?'<img src="'+e.capa_img+'" style="width:100%;height:100%;object-fit:contain">':'sem imagem — arraste, cole (Ctrl+V) ou escolha um arquivo')+'</div>'
-  +'<input type="file" id="es-capfile" accept="image/*" class="util" style="width:100%;font-size:12px;margin-top:8px">'
+  +'<input type="file" id="es-capfile" accept="image/*,application/pdf,.pdf" class="util" style="width:100%;font-size:12px;margin-top:8px">'
   +'<div class="dact"><button class="btn gold" id="es-save" style="flex:1">Salvar</button><button class="btn" id="es-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");$("#dx").onclick=$("#es-cancel").onclick=closeEditor;
  const setP=(out)=>{esimg=out;$("#es-capprev").innerHTML='<img src="'+out+'" style="width:100%;height:100%;object-fit:contain">';toast("Capa reduzida para "+Math.round(out.length/1024)+" KB");};
- $("#es-capfile").onchange=ev=>{const fl=ev.target.files[0];if(!fl)return;const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,setP);rd.readAsDataURL(fl);};
+ $("#es-capfile").onchange=ev=>{const fl=ev.target.files[0];if(!fl)return;capaFromFile(fl,setP);};
  d.onpaste=ev=>{const items=(ev.clipboardData||{}).items||[];for(const it of items){if(it.type&&it.type.indexOf("image")===0){const fl=it.getAsFile();if(!fl)continue;const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,setP);rd.readAsDataURL(fl);ev.preventDefault();break;}}};
- const pv=$("#es-capprev");pv.ondragover=ev=>{ev.preventDefault();pv.style.outline="2px dashed #7ad";};pv.ondragleave=()=>{pv.style.outline="";};pv.ondrop=ev=>{ev.preventDefault();pv.style.outline="";const fl=(ev.dataTransfer&&ev.dataTransfer.files||[])[0];if(fl&&fl.type&&fl.type.indexOf("image")===0){const rd=new FileReader();rd.onload=()=>reduzImg(rd.result,setP);rd.readAsDataURL(fl);}};
+ const pv=$("#es-capprev");pv.ondragover=ev=>{ev.preventDefault();pv.style.outline="2px dashed #7ad";};pv.ondragleave=()=>{pv.style.outline="";};pv.ondrop=ev=>{ev.preventDefault();pv.style.outline="";const fl=(ev.dataTransfer&&ev.dataTransfer.files||[])[0];if(ehCapaFile(fl)){capaFromFile(fl,setP);}};
  $("#es-save").onclick=async()=>{const patch={selo:$("#es-selo").value};F.forEach(f=>patch[f[0]]=$("#es-"+f[0]).value.trim());if(temColEst('colecao'))patch.colecao=$("#es-colecao").value.trim();if(esimg&&temColEst('capa_img'))patch.capa_img=esimg;if(e._new)await addEstoque(patch);else await patchEstoque(id,patch);closeEditor();render();};}
 function openReimp(id){const r=reimp.find(x=>x.id===id)||{_new:true,selo:SELOS[0]};const d=$("#drawer");
  const F=[["titulo","Título"],["n","Nº da reimpressão"],["acabamento","Acabamento"],["formato","Formato"],["novo_isbn","Novo ISBN"],["lote","Lote"],["status","Status"]];
