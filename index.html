@@ -1022,6 +1022,14 @@ function viewPCP(){
  * só usam a lista no campo "Agente/Contato" da obra. Decisão da Isabella (14/08/2026).
  * =============================================================================================== */
 function podeVerContatos(){return meNome()==="Bia";}
+/* Liga um contato às obras onde ele foi definido como Agente/Contato (campo capa_agente).
+   Casa pelo e-mail; se o contato não tiver e-mail, casa pelo nome. */
+function obrasDoContato(c){
+ if(!c)return [];
+ const email=String(c.email||'').toLowerCase().trim();
+ const nome=String(c.nome||'').toLowerCase().trim();
+ return (prod||[]).filter(p=>{const ag=String(p.capa_agente||'').toLowerCase();if(!ag)return false;if(email)return ag.indexOf(email)>=0;if(nome&&nome.length>2)return ag.indexOf(nome)>=0;return false;});
+}
 function ctFiltrar(q){q=(q||'').toLowerCase().trim();document.querySelectorAll('[data-ctrow]').forEach(tr=>{const s=tr.getAttribute('data-search')||'';tr.style.display=(!q||s.indexOf(q)>=0)?'':'none';});}
 function viewContatos(){
  const CATS=[['agente','Agentes de direitos','#3A6EA5'],['editora','Editoras estrangeiras','#7A5C9E'],['capista','Ilustradores / capistas','#2E5A3E'],['','Outros','#6b6b6b']];
@@ -1035,18 +1043,20 @@ function viewContatos(){
    const ck='ct:'+(cat[0]||'outros');
    h+='<div class="selogroup" style="--gc:'+cat[2]+'"><div class="selohead" data-collapse="'+ck+'" style="background:'+cat[2]+';cursor:pointer"><span class="sn">'+cat[1]+'</span><span class="cnt">'+rows.length+' <span style="display:inline-block;transform:rotate('+(collapsed[ck]?'-90deg':'0deg')+')">▾</span></span></div>';
    if(!collapsed[ck]){
-     h+='<div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Empresa</th><th>Tipo</th><th>País</th><th>Negocia</th><th>Obras</th><th>Conf.</th><th>Observação</th><th>Fonte</th><th></th></tr></thead><tbody>';
+     h+='<div style="overflow-x:auto"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Empresa</th><th>Tipo</th><th>País</th><th>Negocia</th><th>Obras</th><th>Conf.</th><th>Observação</th><th></th></tr></thead><tbody>';
      h+=rows.map(c=>{
-       const busca=[c.nome,c.email,c.empresa,c.tipo,c.pais,c.negociamos,c.obras,c.observacao,c.fonte].join(' ').toLowerCase();
+       const vinc=obrasDoContato(c);
+       const vincBadges=vinc.map(p=>'<span class="dp" data-open="'+p.id+'" style="cursor:pointer;font-size:10px;padding:1px 6px;margin:0 3px 3px 0;display:inline-block" title="abrir obra">📖 '+esc(p.titulo||p.original||'')+'</span>').join('');
+       const busca=[c.nome,c.email,c.empresa,c.tipo,c.pais,c.negociamos,c.obras,c.observacao].concat(vinc.map(p=>p.titulo||p.original||'')).join(' ').toLowerCase();
        const cell=(v)=>'<td class="util" style="font-size:11px">'+esc(v||'—')+'</td>';
+       const obrasCell=(vincBadges||'')+(c.obras?'<div style="color:var(--muted);'+(vincBadges?'margin-top:3px':'')+'">'+esc(c.obras)+'</div>':(vincBadges?'':'—'));
        return '<tr data-ctrow="1" data-search="'+esc(busca)+'"'+((c.ativo===false)?' style="opacity:.5"':'')+'>'
         +'<td style="font-size:12px;font-weight:600;white-space:nowrap">'+esc(c.nome||'—')+(c.ativo===false?' <span class="util" style="font-size:9px;color:var(--muted)">(inativo)</span>':'')+'</td>'
         +'<td class="util" style="font-size:11px;white-space:nowrap">'+(c.email?'<a href="mailto:'+esc(c.email)+'" onclick="event.stopPropagation()">'+esc(c.email)+'</a>':'—')+'</td>'
         +cell(c.empresa)+cell(c.tipo)+cell(c.pais)+cell(c.negociamos)
-        +'<td class="util" style="font-size:11px;max-width:220px">'+esc(c.obras||'—')+'</td>'
+        +'<td class="util" style="font-size:11px;max-width:260px">'+obrasCell+'</td>'
         +'<td>'+confBadge(c.confianca)+'</td>'
         +'<td class="util" style="font-size:11px;max-width:240px">'+esc(c.observacao||'—')+'</td>'
-        +cell(c.fonte)
         +'<td style="white-space:nowrap"><button class="btn" data-editcontato="'+c.id+'" style="padding:2px 9px">✎</button></td></tr>';
      }).join("");
      h+='</tbody></table></div>';
