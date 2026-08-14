@@ -981,9 +981,25 @@ function viewFichas(){
    return '<tr'+(falta?' style="background:rgba(194,31,74,.05)"':'')+'><td>'+esc(p.titulo)+(falta?' <span class="pz warn">sem ficha</span>':'')+'</td><td class="util" style="font-size:11px">'+esc(p.selo)+'</td><td class="util" style="font-size:11px">'+esc(mi.formato||'—')+'</td><td class="util" style="font-size:11px">'+esc(pgM)+'</td><td class="util" style="font-size:11px">'+esc(mi.paginacao||p.paginas||'—')+'</td><td class="util" style="font-size:11px">'+esc(pgC)+(ca.acabamento?' · '+esc(ca.acabamento):'')+'</td><td style="white-space:nowrap"><button class="btn" data-dt="'+p.id+'" style="padding:2px 10px">📐 Editar</button> <button class="btn gold" data-gerardt="'+p.id+'" style="padding:2px 10px">⬇ Gerar</button></td></tr>';}).join("");
  return h+'</tbody></table></div>';
 }
-const VIEWS={prod:viewProd,coord:viewCoord,estudios:viewEstudios,capas:viewCapas,pg:viewPG,grafica:viewGrafica,estoque:viewEstoque,reimp:viewReimp,pagamentos:viewPagamentos,contratos:viewContratos,fichas:viewFichas,funcoes:viewFuncoes,prestadores:viewPrestadores,colecoes:viewColecoes,historico:viewHistorico,cad:viewCad};
-const TABS=[["prod","Produção"],["capas","Capas"],["pg","P&G"],["grafica","Gráfica"],["estudios","Estúdios"],["prestadores","Prestadores"],["colecoes","Coleções"],["funcoes","Funções"],["pagamentos","Pagamentos"],["contratos","Contratos"],["fichas","Ficha técnica"],["historico","Histórico"],["estoque","Estoque"],["reimp","Reimpressão"],["coord","Coordenação"]];
-function renderTabs(){$("#tabs").innerHTML=TABS.map(t=>{let n="";if(t[0]==="prod")n=prod.filter(p=>p.status!=="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="pg")n=prod.filter(p=>p.status==="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="grafica")n=prod.filter(p=>(p.local||'')==='grafica').length;if(t[0]==="estoque")n=estoque.length;return '<button class="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(n?' <span class="n">'+n+'</span>':'')+'</button>';}).join("");}
+/* ===== Painel PCP da Luana =====================================================================
+ * A Luana acumula a função de PCP (Planejamento e Controle de Produção) e mantinha um painel de PCP
+ * próprio dela (pendências de e-mail + Discord), separado deste sistema. Pra ela não precisar olhar
+ * em dois lugares ao mesmo tempo, embutimos esse painel numa aba "PCP" que aparece SÓ no login dela.
+ * O conteúdo vem do arquivo pcp.html (na raiz do mesmo repositório) via <iframe> — assim a Luana
+ * atualiza o PCP subindo um novo pcp.html no repositório, sem mexer no painel principal.
+ * Decisão registrada a pedido da Isabella (14/08/2026). Pra liberar a aba pra mais pessoas, é só
+ * ajustar podeVerPCP() abaixo (ex.: incluir "Isabella" / "Bia").
+ * ============================================================================================== */
+function podeVerPCP(){return meNome()==="Luana";}
+function viewPCP(){
+ return '<div style="margin-top:8px">'
+  +'<div class="util" style="font-size:11px;color:var(--muted);margin:0 2px 8px">Seu painel de PCP (pendências de e-mail + Discord), aqui dentro pra não olhar em dois lugares. Pra atualizar, suba um novo <b>pcp.html</b> no repositório da organização — este quadro reflete esse arquivo.</div>'
+  +'<iframe src="pcp.html" title="Painel PCP" style="width:100%;height:82vh;border:1px solid var(--line);border-radius:12px;background:#fff"></iframe>'
+  +'</div>';
+}
+const VIEWS={prod:viewProd,coord:viewCoord,estudios:viewEstudios,capas:viewCapas,pg:viewPG,grafica:viewGrafica,estoque:viewEstoque,reimp:viewReimp,pagamentos:viewPagamentos,contratos:viewContratos,fichas:viewFichas,funcoes:viewFuncoes,prestadores:viewPrestadores,colecoes:viewColecoes,historico:viewHistorico,cad:viewCad,pcp:viewPCP};
+const TABS=[["prod","Produção"],["capas","Capas"],["pg","P&G"],["grafica","Gráfica"],["estudios","Estúdios"],["prestadores","Prestadores"],["colecoes","Coleções"],["funcoes","Funções"],["pagamentos","Pagamentos"],["contratos","Contratos"],["fichas","Ficha técnica"],["historico","Histórico"],["estoque","Estoque"],["reimp","Reimpressão"],["coord","Coordenação"],["pcp","📋 PCP"]];
+function renderTabs(){$("#tabs").innerHTML=TABS.filter(t=>t[0]!=="pcp"||podeVerPCP()).map(t=>{let n="";if(t[0]==="prod")n=prod.filter(p=>p.status!=="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="pg")n=prod.filter(p=>p.status==="P&G"&&(p.local||'')!=='grafica'&&(p.local||'')!=='estoque').length;if(t[0]==="grafica")n=prod.filter(p=>(p.local||'')==='grafica').length;if(t[0]==="estoque")n=estoque.length;return '<button class="tab" data-tab="'+t[0]+'" aria-selected="'+(tab===t[0])+'">'+t[1]+(n?' <span class="n">'+n+'</span>':'')+'</button>';}).join("");}
 function render(){renderTabs();$("#view").innerHTML=VIEWS[tab]();if(tab==="cad")fillCurOpts();renderNotif();}
 
 /* drawer editor */

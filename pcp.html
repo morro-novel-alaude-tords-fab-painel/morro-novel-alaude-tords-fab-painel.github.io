@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel PCP — Atualização com Discord | Grupo Editorial Alta Books</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --border: #dde1e6;
+    --text: #1c2430;
+    --muted: #5c6674;
+    --accent: #1f4e79;
+    --acao: #8a3b12;
+    --acao-bg: #fdf1e8;
+    --aguard: #6b5b1e;
+    --aguard-bg: #fbf6e3;
+    --info: #2e5e3a;
+    --info-bg: #ecf5ee;
+    --alta-bg: #b3261e;
+    --alta-fg: #ffffff;
+    --tag-bg: #eef1f4;
+    --dc-bg: #dcebe0;
+    --dc-fg: #245c34;
+    --dd-bg: #f6dfd2;
+    --dd-fg: #8a3b12;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14181e;
+      --surface: #1e242c;
+      --border: #333c47;
+      --text: #e6e9ed;
+      --muted: #9aa4b0;
+      --accent: #7fb0da;
+      --acao: #f0a06c;
+      --acao-bg: #33241a;
+      --aguard: #d8c26a;
+      --aguard-bg: #2f2a18;
+      --info: #8cc79c;
+      --info-bg: #1c2b20;
+      --alta-bg: #d64541;
+      --alta-fg: #ffffff;
+      --tag-bg: #2a323c;
+      --dc-bg: #21372a;
+      --dc-fg: #8cc79c;
+      --dd-bg: #3a2818;
+      --dd-fg: #f0a06c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", -apple-system, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.45; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 48px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 14px; margin-bottom: 22px; }
+  header h1 { font-size: 1.35rem; margin: 0 0 4px; color: var(--accent); }
+  header p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; border-top: 4px solid var(--border); }
+  .tile .num { font-size: 1.9rem; font-weight: 700; }
+  .tile .lbl { font-size: 0.82rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile.t-acao { border-top-color: var(--acao); }
+  .tile.t-acao .num { color: var(--acao); }
+  .tile.t-aguard { border-top-color: var(--aguard); }
+  .tile.t-aguard .num { color: var(--aguard); }
+  .tile.t-info { border-top-color: var(--info); }
+  .tile.t-info .num { color: var(--info); }
+  section { margin-bottom: 30px; }
+  section > h2 { font-size: 1.02rem; margin: 0 0 12px; padding: 7px 12px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .h-acao { background: var(--acao-bg); color: var(--acao); }
+  .h-aguard { background: var(--aguard-bg); color: var(--aguard); }
+  .h-info { background: var(--info-bg); color: var(--info); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 15px; display: flex; flex-direction: column; gap: 6px; }
+  .card h3 { margin: 0; font-size: 0.97rem; }
+  .meta { font-size: 0.8rem; color: var(--muted); }
+  .desc { font-size: 0.87rem; margin: 0; }
+  .disc { font-size: 0.83rem; margin: 0; padding: 6px 8px; border-radius: 6px; background: var(--tag-bg); }
+  .next { font-size: 0.85rem; margin: 2px 0 0; padding-top: 6px; border-top: 1px dashed var(--border); }
+  .next strong { color: var(--accent); }
+  .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--tag-bg); color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge.alta { background: var(--alta-bg); color: var(--alta-fg); }
+  .badge.dc { background: var(--dc-bg); color: var(--dc-fg); }
+  .badge.dd { background: var(--dd-bg); color: var(--dd-fg); }
+  ul.compact { margin: 4px 0 0; padding-left: 18px; font-size: 0.84rem; }
+  ul.compact li { margin-bottom: 2px; }
+  footer { margin-top: 34px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Painel de Pendências — PCP Editorial</h1>
+  <p>Grupo Editorial Alta Books · Caixa pcp@altabooks.com.br · Atualização com Discord — 14/08/2026, 13:11 (rev. 13:35) · Relatório Discord de 14/08, 12:33 · Obras finalizadas confirmadas pela usuária foram retiradas</p>
+</header>
+
+<div class="tiles">
+  <div class="tile t-acao"><div class="num">15</div><div class="lbl">Requer ação do PCP</div></div>
+  <div class="tile t-aguard"><div class="num">7</div><div class="lbl">Aguardando terceiros</div></div>
+  <div class="tile t-info"><div class="num">10</div><div class="lbl">Informativos</div></div>
+</div>
+
+<section>
+<h2 class="h-acao">Requer ação do PCP</h2>
+<div class="cards">
+
+<div class="card">
+  <div class="badges"><span class="badge alta">Alta</span><span class="badge dd">Discord: diverge</span><span class="badge">Novidade do Discord</span></div>
+  <h3>Marcas Viscerais</h3>
+  <div class="meta">Alta Books · Estúdio Ellen Andrade · Avaliação: Luana Maura · Rodadas: 1 (registrada no Discord; sem recusa formal por e-mail) · Última msg: 13/08, 18:48</div>
+  <p class="desc">Item novo, identificado no Discord: o estúdio devolveu os arquivos ajustados e a finalização depende da avaliação da própria Luana. Ana Clara agradeceu em 14/08, 08:43.</p>
+  <p class="disc">Discord: #validações, tópico [RECUSADO] Marcas Viscerais — "está pendente a avaliação da Luana Maura nesses arquivos ajustados para que possamos finalizar a obra." (A mensagem grafa "13/06/2026", aparente erro de digitação para 13/08.)</p>
+  <p class="next"><strong>Próximo passo:</strong> avaliar os arquivos ajustados para liberar a finalização da obra.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge alta">Alta</span><span class="badge dd">Discord: diverge</span><span class="badge">Bloqueio de estúdio</span></div>
+  <h3>Estúdios Matheus Santos e Victor Airton — orientações divergentes</h3>
+  <div class="meta">Selos Edições 70 / Actual · Últimas msgs: e-mail 13/08, 01:53 · Discord 12/08, 10:46</div>
+  <p class="desc">Versão do e-mail: Rodrigo Mentz autorizou seguir com os dois estúdios e emitir contratos (12/08, 11:33); Adm Editorial orientou aguardar (13/08). Projetos afetados: Leonardo, Amélia de Leuchtenberg e Pipoca na Panela.</p>
+  <p class="disc">Discord: #empadao, Anderson Vieira, 12/08, 10:46 — "ambos estão bloqueados provisoriamente. em contrapartida tem a Wendy livre". Atenção: no Discord o estúdio é "Matheus Santos" (o painel anterior grafava "Matheus Silva"). A autorização do Mentz por e-mail (11:33) é posterior à mensagem do Anderson (10:46) — as versões conflitam.</p>
+  <p class="next"><strong>Próximo passo:</strong> confirmar com Anderson qual orientação vale (bloqueio provisório × liberação relatada pelo Mentz), comunicar Adm Editorial e corrigir o nome do estúdio na historização.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dd">Discord: diverge</span><span class="badge">Registrar desfecho</span></div>
+  <h3>Contra o Ativismo Judicial</h3>
+  <div class="meta">Almedina Jurídico · ISBN 978-65-5182-064-9 · Avaliação: Paulo Gomes (assumiu de Ana Clara Tambasco em 05/08) · Rodadas: 1 (05/08)</div>
+  <p class="desc">Versão do e-mail: alterações de 07/08 aguardando revalidação.</p>
+  <p class="disc">Discord: revalidação concluída — Paulo Gomes, #validações, 13/08, 09:51: "Os ajustes solicitados foram aplicados. Epub abre no Kindle Previewer e está aprovado na Bookwire. Dados inseridos no banco. Obra em etapa GRÁFICA."</p>
+  <p class="next"><strong>Próximo passo:</strong> confirmar o desfecho, responder à Almedina Jurídico e retirar o item das pendências.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge alta">Alta</span><span class="badge">Discord: sem menção</span><span class="badge">Ajuste gráfico</span></div>
+  <h3>A Arte da Liderança</h3>
+  <div class="meta">Selo Actual · Estúdio Louise Branquinho · Avaliação: a confirmar (aprovação original por Isabella Gibara, 17/06) · Rodadas: 0 na validação; 1 de ajuste gráfico (05/08) · Última msg: 07/08, 14:25</div>
+  <p class="desc">Estúdio aplicou os ajustes da gráfica e esclareceu que lombada e 2ª orelha estão em azul petróleo, não em preto 4 cores. Sem retorno desde 07/08.</p>
+  <p class="disc">Discord: nenhuma menção aos ajustes de gráfica de 07/08; último registro é a liberação do livro no #prelo em 30/07.</p>
+  <p class="next"><strong>Próximo passo:</strong> conferir os arquivos ajustados e retornar ao Papel &amp; Gráfica.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge alta">Alta</span><span class="badge dd">Discord: diverge</span><span class="badge">Decisão pendente</span></div>
+  <h3>Quase Ela Deu o Sim, Mas... e Outros Contos</h3>
+  <div class="meta">Selo Faria e Silva · Estúdio Rodrigo Faria e Silva · Avaliação: Isabella Gibara · Rodadas: 2 (07/08 e 13/08) · Última msg: 13/08, 15:26</div>
+  <p class="desc">Versão do e-mail: capa corrigida no Drive; CIP mantida "conforme alinhamento com Anderson".</p>
+  <p class="disc">Discord: a capa reenviada confere, mas NÃO há confirmação do alinhamento da CIP — Isabella (13/08, 09:20) ainda questiona: "A CIP ainda traz 'São Paulo: Faria e Silva Editora'; o endereço da editora é Rio de Janeiro. Confirmar se seguirá assim." Registro da Luana: obra "ficou travada com o Anderson".</p>
+  <p class="next"><strong>Próximo passo:</strong> obter a confirmação formal do Anderson sobre a praça da CIP (São Paulo × Rio de Janeiro) e repassar à Isabella para destravar a validação.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dd">Discord: diverge</span><span class="badge">Revalidação</span></div>
+  <h3>Sermão do Rosário</h3>
+  <div class="meta">Selo Faria e Silva · Estúdio Rodrigo Faria e Silva · Avaliação: Beatriz de Assis · Rodadas: 2 (07/08 e 13/08) · Última msg: 13/08, 16:55</div>
+  <p class="desc">Versão do e-mail: estúdio devolveu a amostra ajustada em 13/08, 16:55 — aguardando revalidação.</p>
+  <p class="disc">Discord: registro mais recente é o envio da devolutiva ao estúdio (13/08, 16:04); a nova entrega do estúdio ainda não consta no tópico. O e-mail é posterior ao registro do Discord.</p>
+  <p class="next"><strong>Próximo passo:</strong> encaminhar a amostra ajustada para análise da Beatriz e atualizar o tópico em #validações.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dd">Discord: diverge</span><span class="badge">Revalidação</span></div>
+  <h3>Manifestos</h3>
+  <div class="meta">Selo Faria e Silva · Estúdio Rodrigo Faria e Silva · Avaliação: Paulo Gomes · Rodadas: 2 (07/08 e 13/08) · Última msg: 13/08, 16:54</div>
+  <p class="desc">Versão do e-mail: estúdio devolveu a amostra ajustada em 13/08, 16:54 — aguardando revalidação.</p>
+  <p class="disc">Discord: registro mais recente é o envio da devolutiva ao estúdio (13/08, 15:49); a nova entrega ainda não consta no tópico. O e-mail é posterior ao registro do Discord.</p>
+  <p class="next"><strong>Próximo passo:</strong> encaminhar a amostra ajustada para análise do Paulo e atualizar o tópico em #validações.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Revalidação</span></div>
+  <h3>A Volta ao Mundo em 80 Dias</h3>
+  <div class="meta">Tordesilhas Fabulous Classics · Estúdio Rita Motta · Avaliação: Paulo Gomes · Rodadas: 1 (12/08) · Última msg: 13/08, 10:34 (Discord)</div>
+  <p class="desc">Arquivos ajustados no pré-print em 13/08 após a recusa de 12/08 (site sob a logo Tordesilhas, verniz, Media Kit/Site).</p>
+  <p class="disc">Discord: confere — Luana encaminhou ao Paulo em 13/08, 10:34: "Arquivos ajustados no pré-print para sua análise."</p>
+  <p class="next"><strong>Próximo passo:</strong> acompanhar a análise do Paulo e dar devolutiva ao estúdio.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dd">Discord: diverge</span><span class="badge">Pós-aprovação</span></div>
+  <h3>Convivência Tóxica — Módulo Amazon</h3>
+  <div class="meta">Selo Minotauro · Estúdio Victor Airton · Avaliação: Isabella Gibara (MA); aprovação da obra em 19/06 por Paulo Gomes · Rodadas pós-aprovação: 2 (Bookwire 12/06; Módulo Amazon 04/08)</div>
+  <p class="desc">Versão do e-mail: estúdio enviou link com MA ajustado em 12/08, aguardando revalidação.</p>
+  <p class="disc">Discord: o MA já foi validado em 06/08 — Isabella: "O MA ficou ótimo. Enviado para a Andrea." Não há registro de novo MA em 12/08.</p>
+  <p class="next"><strong>Próximo passo:</strong> confirmar com Isabella se o link enviado pelo estúdio em 12/08 é o mesmo material já validado; se sim, encerrar o item e responder ao estúdio.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Discord: sem menção</span><span class="badge">Nova validação</span></div>
+  <h3>Memória Volátil (Volatile Memory)</h3>
+  <div class="meta">Selo Morro Branco · Estúdio Edite Siegert · EQ Eduarda Silva · Avaliação: a confirmar · Rodadas: 0 (validação não iniciada) · Última msg: 13/08, 13:35</div>
+  <p class="desc">Fim de produção comunicado em 13/08; arquivos completos no Drive do estúdio.</p>
+  <p class="disc">Discord: sem registro do fim de produção; sem tópico em #validações. Pendências da ficha cadastral apontadas em 28/07 no canal da obra (livros relacionados 80/20, itálicos, "instintos de caça" na contracapa).</p>
+  <p class="next"><strong>Próximo passo:</strong> abrir a validação (tópico em #validações com staff designado) e tratar as pendências da ficha cadastral.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Nova validação</span></div>
+  <h3>O Capital: das Sombras à Revolução</h3>
+  <div class="meta">Selo Edições 70 · Estúdio Alessandro Thomé · EQ Rafael Surgek · Avaliação: Isabella Gibara · Rodadas: 0 (em validação) · Última msg: 13/08, 08:49 (Discord)</div>
+  <p class="desc">Obra finalizada em 11/08; tópico de validação aberto em 12/08 com staff designado. Volumes 2 e 3 consolidados em livro único, conforme Rodrigo Mentz por e-mail.</p>
+  <p class="disc">Discord: confere — tópico aberto em 12/08 com "Staff: @Isabella Gibara". Sem menção no Discord à decisão de consolidar os volumes.</p>
+  <p class="next"><strong>Próximo passo:</strong> registrar no tópico a consolidação dos volumes 2 e 3 (informação do e-mail do Mentz) para orientar a validação da Isabella.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Starts de projeto</span></div>
+  <h3>Starts de projeto com estrela — conferir registro</h3>
+  <div class="meta">Diversos remetentes e estúdios · 25/06 a 11/08</div>
+  <p class="desc">Starts e inícios de produção marcados com estrela na caixa (IO — Inteligência Original, The Children, seis títulos Faria e Silva, lote de 03/08, Manual de Sobrevivência Geopolítica, A Nova Década Perdida v. 1 e 2, Peter Pan, OKR 3E, títulos Almedina Jurídico, entre outros).</p>
+  <p class="disc">Discord: confere; adicionar à conferência Iron Heart (Alta Novel, livro 2, Nina Varela, 413 pp — anúncio de 30/07 em #estúdios-ficção) e The Children (Morro Branco, apto para produção imediata; contrato condicionado ao "retorno da emissão").</p>
+  <p class="next"><strong>Próximo passo:</strong> conferir todos na planilha de produção, incluindo Iron Heart e The Children, e desmarcar as estrelas dos já historizados.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge alta">Alta</span><span class="badge">Revalidação</span></div>
+  <h3>Líderes que Curam (Healing Leaders)</h3>
+  <div class="meta">Estúdio Wendy Campos · EQ Rafael Surgek · Avaliação: Beatriz de Assis · Rodadas: 1 (12/08) · Última msg: 13/08, 10:34 (Discord)</div>
+  <p class="desc">Arquivos ajustados no pré-print em 13/08 para análise, após recusa de 11/08 (capa PDF/X-1a, subtítulo na CIP, laminação). Ruggeri pediu prioridade por e-mail: 1.000 exemplares vendidos.</p>
+  <p class="disc">Discord: confere — "Oi, @Beatriz de Assis! Arquivos ajustados no pré-print para sua análise." Sem menção a prazo ou à prioridade do Ruggeri.</p>
+  <p class="next"><strong>Próximo passo:</strong> sinalizar a prioridade à Beatriz (1.000 exemplares vendidos) e acompanhar a análise para emitir aprovação ou nova devolutiva.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Novidade do Discord</span><span class="badge">Padronização MA</span></div>
+  <h3>House of Bane and Blood (Nós Ardemos Intensamente) — dúvida de Módulo Amazon</h3>
+  <div class="meta">Alta Novel · Última msg: 14/08, 10:44 (Discord)</div>
+  <p class="desc">Item novo, identificado no Discord: Mariana Bernardi Naime questiona o padrão do MA — peças menores de 970×300 px ou duas peças grandes de 970×600 px. Beatriz sugeriu que o Fernando fale direto com o Paulo.</p>
+  <p class="next"><strong>Próximo passo:</strong> alinhar com o Paulo o padrão do MA e responder no canal, atualizando o PDF de instrução se necessário.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Novidade do Discord</span><span class="badge">Obra parada</span></div>
+  <h3>Vai na Bola, Glanderson!</h3>
+  <div class="meta">Selo Minotauro · Estúdio Robson (Cumbuca) · Rodadas: 1 (recusa em 07/07, reiterada em 21/07, sem entrega dos ajustes) · Última msg: 12/08, 16:34 (Discord)</div>
+  <p class="desc">Item novo, identificado no Discord: obra sem retomada de ajustes pelo estúdio desde 30/06. Anderson vetou novos trabalhos ao estúdio: "Semana passada pegou mais jobs e, ainda por cima, usando nome de outra empresa. Tomou um sonoro NAO."</p>
+  <p class="next"><strong>Próximo passo:</strong> alinhar com Anderson o destino da obra (cobrança final ao estúdio ou realocação) e historizar a decisão.</p>
+</div>
+
+</div>
+</section>
+
+<section>
+<h2 class="h-aguard">Aguardando terceiros</h2>
+<div class="cards">
+
+<div class="card">
+  <div class="badges"><span class="badge alta">Alta</span><span class="badge dc">Discord: confirma</span><span class="badge">Adm Editorial</span></div>
+  <h3>The Psychology of Leadership — pagamento ao estúdio</h3>
+  <div class="meta">Alta Books · Estúdio Andresa Vidal · Avaliação: Paulo Gomes · Rodadas: 1 (antes da aprovação de 24/07) · Última msg: 11/08, 05:05</div>
+  <p class="desc">Aprovada com pagamento liberado em 24/07, mas o estúdio cobra o pagamento não recebido (Carta de Aceite); segunda cobrança em 11/08.</p>
+  <p class="disc">Discord: aprovação de 24/07 confirmada (Paulo Gomes: "Ajustes realizados na obra. Dados espelhados no banco."). Sobre o pagamento: sem menção após 24/07.</p>
+  <p class="next"><strong>Próximo passo:</strong> acionar o Adm Editorial sobre a execução do pagamento e dar retorno ao estúdio.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dd">Discord: diverge</span><span class="badge">Estúdio</span></div>
+  <h3>Guerra Civil e Outros Contos</h3>
+  <div class="meta">Selo Faria e Silva · Estúdio Rodrigo Faria e Silva · Rodadas: 4 (07, 10, 11 e 12/08) · Última msg: 12/08, 13:41 (Discord)</div>
+  <p class="desc">Versão do e-mail: terceira devolutiva enviada em 11/08, sem retorno do estúdio.</p>
+  <p class="disc">Discord: já houve uma QUARTA rodada, enviada ao estúdio em 12/08 (histórico: 07, 10, 11 e 12/08). Pendências que persistem: folha de rosto "ALCANTARA" sem acento, dcterms:publisher "anonymous" e amostra sem página de créditos.</p>
+  <p class="next"><strong>Próximo passo:</strong> cobrar o estúdio pela quarta devolutiva; atenção ao histórico — próxima recusa se aproxima do critério de bloqueio.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dd">Discord: diverge</span><span class="badge">Estúdio</span></div>
+  <h3>Psychology Statistics For Dummies</h3>
+  <div class="meta">Estúdio Eveline Machado · Avaliação: Beatriz de Assis · Rodadas: 1 (13/08) · Última msg: 13/08, 16:04 (Discord)</div>
+  <p class="desc">Versão do e-mail: obra na fila de validação após fim de produção de 12/08.</p>
+  <p class="disc">Discord: a validação já ocorreu — obra RECUSADA em 13/08 por Beatriz ("As duas versões do epub do livro não foram aprovadas na Bookwire"), com devolutiva completa enviada ao estúdio em 13/08, 16:04. A bola está com o estúdio.</p>
+  <p class="next"><strong>Próximo passo:</strong> verificar se a devolutiva formal por e-mail foi enviada ao estúdio; aguardar arquivos ajustados.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Papel &amp; Gráfica</span><span class="badge">Pós-aprovação</span></div>
+  <h3>A Tempestade que se Aproxima (The Coming Storm)</h3>
+  <div class="meta">Alta Books · Estúdio Wendy Campos · Avaliação: Beatriz de Assis (aprovação 18/06) · Rodadas pós-aprovação: 2 de ajuste gráfico (11/08 e 12/08) · Última msg: 13/08, 09:57</div>
+  <p class="desc">Aprovada em 18/06; ajustes de miolo aplicados pelo estúdio e reenviados ao Papel &amp; Gráfica em 13/08.</p>
+  <p class="disc">Discord: aprovação de 18/06 confirmada (código 7323 no #livros_aprovados). Sobre o reenvio de 13/08: sem menção.</p>
+  <p class="next"><strong>Próximo passo:</strong> aguardar confirmação da gráfica; cobrar se não houver retorno.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Obra bloqueada</span></div>
+  <h3>Permanece Escrito</h3>
+  <div class="meta">Selo Edições 70 · Estúdio Matheus Santos · Avaliação: Ana Clara Tambasco · Rodadas: 4 (bloqueada na 4ª recusa) · Última msg: 13/08, 16:35 (Discord)</div>
+  <p class="desc">Obra BLOQUEADA em 13/08 após a quarta recusa (reprovação de Ana Clara em 12/08).</p>
+  <p class="disc">Discord: confere — "Livro bloqueado em 13/08/2026". Anderson reforçou a regra em 12/08: "combinamos de que 3 devolutivas é pra abortar o livro e gritar no meu ouvido".</p>
+  <p class="next"><strong>Próximo passo:</strong> aguardar cumprimento das condições do bloqueio; manter historização atualizada.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Discord: sem menção</span><span class="badge">Adm Editorial</span></div>
+  <h3>ADHD for Dummies — contrato de Revisão Técnica</h3>
+  <div class="meta">Prestadora Gisele Mascarenhas (via Bacci/TECS) · Última msg: 11/08, 15:54</div>
+  <p class="desc">Novos termos enviados (prazo ampliado). Pendências com o Adm Editorial: emissão do contrato e orientação geral sobre NF de pessoa física × jurídica.</p>
+  <p class="disc">Discord: nada sobre o contrato ou a questão de NF (apenas registro antigo de dez/2025 sobre contratos na fila; não confundir com "Powered by ADHD", da Alaúde).</p>
+  <p class="next"><strong>Próximo passo:</strong> acompanhar a definição do Adm Editorial sobre NF e a emissão do contrato.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Novidade do Discord</span><span class="badge">Espelhamento</span></div>
+  <h3>Responsabilidade Civil e Inteligência Artificial</h3>
+  <div class="meta">Almedina · Avaliação: Isabella Gibara · Rodadas: 2 (a 2ª em 12/08, apenas pela pasta raiz) · Última msg: 13/08, 15:41 (Discord)</div>
+  <p class="desc">Item novo, identificado no Discord: Luana ajustou os arquivos (2ª recusa de 12/08 era apenas pela pasta raiz com espaços) e pediu à Isabella o espelhamento dos dados para aprovação.</p>
+  <p class="next"><strong>Próximo passo:</strong> aguardar o espelhamento e a aprovação da Isabella; cobrar se não houver retorno até segunda.</p>
+</div>
+
+</div>
+</section>
+
+<section>
+<h2 class="h-info">Informativos</h2>
+<div class="cards">
+
+<div class="card">
+  <div class="badges"><span class="badge">Novidade do Discord</span><span class="badge">Norma editorial</span></div>
+  <h3>Novo Manual de Ficção da Alta Books</h3>
+  <div class="meta">Beatriz de Assis · #estúdios-ficção · 13/08, 16:14</div>
+  <p class="desc">Novo manual publicado, válido para todos os selos de ficção do grupo (Alta Novel, Morro Branco e Tordesilhas, incluindo Fabulous Classics), com orientações sobre o novo modelo de tradução. Impacta as próximas validações de ficção do PCP.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Novidade do Discord</span><span class="badge">Ferramentas</span></div>
+  <h3>Plataformas isbn.altabooks e estudios.altabooks</h3>
+  <div class="meta">Anderson Vieira · #empadao · 12/08, 16:14</div>
+  <p class="desc">Novas plataformas entrando no ar, dependentes de cruzamentos de informações em andamento. Logins de teste distribuídos à equipe em 13/08 (Luana tem login próprio).</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Aprovação / Pagamento</span></div>
+  <h3>Senhora — APROVADA</h3>
+  <div class="meta">Tordesilhas Fabulous Classics · Estúdio Rita Motta · 13/08, 14:54</div>
+  <p class="desc">Aprovação emitida com pagamento liberado em 13/08/26.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Aprovação / Pagamento</span></div>
+  <h3>Comentários às Resoluções do TSE nas Eleições de 2024 — APROVADA</h3>
+  <div class="meta">Almedina · Estúdio Manuella Castro · 13/08, 11:51</div>
+  <p class="desc">Aprovação emitida com pagamento liberado em 13/08/26, após as correções aplicadas em 07/08.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Aprovação / Pagamento</span></div>
+  <h3>How to Read the Akashic Records — APROVADA</h3>
+  <div class="meta">Selo Alaúde · Estúdio Wendy Campos · 13/08, 13:29</div>
+  <p class="desc">Aprovação com pagamento liberado em 13/08/26. Discord: tópico [FINALIZADO] em 13/08 no #validações.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Aprovação / Pagamento</span></div>
+  <h3>Powered by ADHD (Ative seu TDAH) — APROVADA</h3>
+  <div class="meta">Selo Alaúde · Estúdio Cátia Soderi · Avaliação: Ana Clara Tambasco · 13/08, 13:29</div>
+  <p class="desc">Aprovação com pagamento liberado em 13/08/26. Discord: tópico [FINALIZADO] em 13/08, 15:20.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Aprovação / Pagamento</span></div>
+  <h3>Posicionamento Digital Vencedor — APROVADA</h3>
+  <div class="meta">Selo Actual · Estúdio Rita Motta · 12/08, 17:10</div>
+  <p class="desc">Aprovação com pagamento liberado em 12/08/26. Discord: reprovada em 06/08, ajustes reenviados em 10/08, reunião com a Rita em 12/08 (Anderson, Paulo e Luana) e tópico [FINALIZADO] em 13/08.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge dc">Discord: confirma</span><span class="badge">Aprovação / Pagamento</span></div>
+  <h3>Como Sobreviver aos Layoffs — APROVADA</h3>
+  <div class="meta">Selo Actual · Estúdio Rita Motta · 12/08, 14:42</div>
+  <p class="desc">Aprovação com pagamento liberado em 12/08/26. Discord: tópico [FINALIZADO] em 13/08.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">Novidade do Discord</span><span class="badge">Validação finalizada</span></div>
+  <h3>Sincerely, Your Autistic Child — validação finalizada</h3>
+  <div class="meta">Selo Alaúde · 13/08 (Discord)</div>
+  <p class="desc">Tópico [FINALIZADO] em 13/08 no #validações. Conferir se a formalização por e-mail (aprovação com liberação de pagamento) já foi emitida; não localizada nas buscas do dia.</p>
+</div>
+
+<div class="card">
+  <div class="badges"><span class="badge">ISBN</span></div>
+  <h3>ISBNs regularizados no banco de dados (10–11/08)</h3>
+  <div class="meta">Departamento de ISBN e Catalogação</div>
+  <ul class="compact">
+    <li>Quase Ela Deu o Sim... — inserção física e digital (11/08)</li>
+    <li>Sermão do Rosário — inserção física e digital (10/08)</li>
+    <li>Guerra Civil e Outros Contos — inserção física e digital (10/08)</li>
+    <li>Manifestos — inserção do ISBN físico (10/08)</li>
+    <li>Marcas Viscerais — subtítulo e ano de publicação atualizados (11/08)</li>
+    <li>O Chão da Alma e o Encontro com o Espírito — ISBN corrigido no cadastro (10/08)</li>
+  </ul>
+</div>
+
+</div>
+</section>
+
+<footer>
+Segunda atualização do dia: painel de e-mails (pcp@altabooks.com.br) confrontado com o relatório do Discord de 14/08, 12:33, gerado pela extensão Claude in Chrome. Etiquetas "Discord: confirma/diverge" indicam o resultado do confronto; o relatório do Discord é fonte a confrontar, não verdade absoluta — em divergência, o card apresenta as duas versões e o próximo passo para apurar. "Avaliação:" indica o staff do Departamento de Produto responsável pela validação interna. "Rodadas:" conta as devolutivas/recusas enviadas ao estúdio (regra da casa: 3 devolutivas indicam bloqueio da obra); itens sem contagem não passam por ciclo de recusa (starts, contratos, dúvidas). Prioridade Alta: cobranças explícitas, revalidações há mais de 3 dias e decisões que travam obras. Horários no fuso de Brasília.
+</footer>
+
+</div>
+</body>
+</html>
