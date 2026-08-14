@@ -190,6 +190,7 @@ const PRESTADORES=[["Alessandro Thomé","estudios+copi-revisao","Copidesque, Rev
 /* [titulo, original, autor, selo, serie, volume, ano] — aba Coleções */
 const COLECOES_SEED=[];
 let colecoes=[];
+let contatos=[];             /* agentes/contatos de direitos de capa; vem da tabela `contatos` (fica no banco, não no código público) */
 let prestadores=[];          /* vem da tabela `prestadores`; cai para PRESTADORES */
 let prestEditavel=false;     /* só true quando a tabela existe no banco */
 let fCo={q:''},fEst={ano:'all'},fPr={papel:'all',canal:'all',q:'',fora:false};
@@ -291,6 +292,7 @@ async function loadLive(){
  if(c.error)console.error("[painel] loadLive reimpressoes:",c.error);else reimp=c.data||[];
  await loadExtra();
  await loadColecoes();
+ await loadContatos();
  await loadPrestadores();}
 
 /* render helpers */
@@ -596,6 +598,7 @@ function viewPrestadores(){
 
 /* ---------------- Coleções: séries e volumes ---------------- */
 function nomesColecoes(){const s=new Set();prod.forEach(p=>{if(p.colecao&&p.colecao.trim()&&p.colecao!=='Não')s.add(p.colecao.trim());});(colecoes||[]).forEach(c=>{if(c.serie)s.add(c.serie);});return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
+function nomesAgentes(){const s=new Set();prod.forEach(p=>{if(p.capa_agente&&p.capa_agente.trim())s.add(p.capa_agente.trim());});(contatos||[]).forEach(c=>{const v=((c&&(c.contato||c.nome))||'').trim();if(v)s.add(v);});return [...s].sort((a,b)=>a.localeCompare(b,'pt-BR'));}
 function viewColecoes(){
  const q=fCo.q.toLowerCase();
  const comCol=prod.filter(p=>p.colecao&&p.colecao.trim()&&p.colecao!=='Não');
@@ -624,6 +627,7 @@ function viewCad(){
   +'<label class="f">Título original (principal)</label><input type="text" id="c-ori" style="width:100%">'
   +'<label class="f">Título em português (BR)</label><input type="text" id="c-tit" style="width:100%">'
   +'<label class="f">Autor(es)</label><input type="text" id="c-aut" style="width:100%">'
+  +'<label class="f">Agente / Contato (direitos de capa)</label><input type="text" list="dl-agente" id="c-ag" placeholder="contato/e-mail do detentor dos direitos (digite ou escolha da lista)" style="width:100%"><datalist id="dl-agente">'+nomesAgentes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
   +'<label class="f">Coleção</label><input type="text" list="dl-colc" id="c-col" placeholder="nome da coleção (opcional; digite uma nova se quiser)" style="width:100%"><datalist id="dl-colc">'+nomesColecoes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
   +'<div class="grid2"><div><label class="f">ISBN original</label><input type="text" id="c-isbno" style="width:100%"></div><div><label class="f">ISBN físico</label><input type="text" id="c-isbnf" style="width:100%"></div></div><label class="f">ISBN digital</label><input type="text" id="c-isbnd" style="width:100%">'
   +'<label class="f">Páginas (miolo)</label><input type="number" id="c-pag" placeholder="opcional — usado no cálculo do contrato" style="width:100%">'
@@ -642,6 +646,7 @@ function openCadastro(){const d=$("#drawer");d.onpaste=null;
   +'<label class="f">Título original (principal)</label><input type="text" id="c-ori" style="width:100%">'
   +'<label class="f">Título em português (BR)</label><input type="text" id="c-tit" style="width:100%">'
   +'<label class="f">Autor(es)</label><input type="text" id="c-aut" style="width:100%">'
+  +'<label class="f">Agente / Contato (direitos de capa)</label><input type="text" list="dl-agente" id="c-ag" placeholder="contato/e-mail do detentor dos direitos (digite ou escolha da lista)" style="width:100%"><datalist id="dl-agente">'+nomesAgentes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
   +'<label class="f">Coleção</label><input type="text" list="dl-colc" id="c-col" placeholder="nome da coleção (opcional; digite uma nova se quiser)" style="width:100%"><datalist id="dl-colc">'+nomesColecoes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
   +'<div class="grid2"><div><label class="f">ISBN original</label><input type="text" id="c-isbno" style="width:100%"></div><div><label class="f">ISBN físico</label><input type="text" id="c-isbnf" style="width:100%"></div></div><label class="f">ISBN digital</label><input type="text" id="c-isbnd" style="width:100%">'
   +'<label class="f">Páginas (miolo)</label><input type="number" id="c-pag" placeholder="opcional — usado no cálculo do contrato" style="width:100%">'
@@ -672,6 +677,9 @@ async function loadColecoes(){
   if(!c.error&&c.data&&c.data.length){colecoes=c.data;doBanco=true;}}catch(x){}}
  if(!doBanco)colecoes=COLECOES_SEED.map(r=>({titulo:r[0],original:r[1],autor:r[2],selo:r[3],serie:r[4],volume:r[5],ano:r[6]}));
  window.__coDaPlanilha=!doBanco;
+}
+async function loadContatos(){ contatos=[];
+ if(MODE==="live"){try{const c=await sb.from("contatos").select("*");if(!c.error&&c.data)contatos=c.data;}catch(x){}}
 }
 function avisoPlanilha(txt){return '<div class="util" style="font-size:11px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin:0 2px 10px">'+txt+'</div>';}
 async function loadExtra(){ if(MODE!=="live")return;
@@ -1154,7 +1162,7 @@ function openCapa(id){
   +'<div><label class="f">Situação (produção)</label><select id="cap-sit" style="width:100%">'+CAPA_SIT.map(o=>'<option '+(p.capa_situacao===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
   +'<div class="grid2"><div><label class="f">Status DA (direitos)</label><select id="cap-da" style="width:100%">'+CAPA_DA.map(o=>'<option '+(p.capa_da===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Shutterstock</label><select id="cap-sh" style="width:100%">'+SHUTTER.map(o=>'<option '+(p.capa_shutter===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
-  +'<label class="f">Agente / contato</label><input type="text" id="cap-ag" value="'+esc(p.capa_agente||"")+'" style="width:100%">'
+  +'<label class="f">Agente / contato</label><input type="text" list="dl-agente" id="cap-ag" value="'+esc(p.capa_agente||"")+'" placeholder="digite ou escolha da lista" style="width:100%"><datalist id="dl-agente">'+nomesAgentes().map(n=>'<option value="'+esc(n)+'">').join("")+'</datalist>'
   +'<label class="f">Enviado p/ aprovação (agência) em</label><input type="date" id="cap-envio" value="'+esc(p.capa_envio_aprovacao||"")+'" style="width:100%"><div class="util" style="font-size:11px;color:var(--muted);margin-top:2px">Data em que a capa foi enviada pra agência/editora aprovar (ex.: capas internacionais adquiridas — tipo "enviada aprovação RIFF"). Enquanto não for aprovada, o status vira <b>Em aprovação</b>.</div>'
   +'<label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;font-size:12px;color:var(--muted)"><input type="checkbox" id="cap-aprovag" '+(p.capa_aprovada_agencia?'checked':'')+'> Aprovada pela agência (libera a capa como aprovada)</label>'
   +'<label class="f">Tipo de capa</label><select id="cap-tipo" style="width:100%">'+TIPO_CAPA.map(o=>'<option '+(p.tipo_capa===o?"selected":"")+'>'+o+'</option>').join("")+'</select>'
@@ -1452,7 +1460,7 @@ document.body.addEventListener("click",e=>{
  if(e.target.id==="fprio"){filt.prio=!filt.prio;render();return;}
  if(e.target.id==="addBtn"){openCadastro();return;}
  if(e.target.id==="seedbtn"){e.target.textContent="Carregando… aguarde";e.target.disabled=true;seedLive();return;}
- if(e.target.id==="c-save"){const t=$("#c-ori").value.trim()||$("#c-tit").value.trim();if(!t){$("#c-ori").focus();return;}addProd({selo:$("#c-selo").value,titulo:$("#c-tit").value.trim(),original:$("#c-ori").value.trim(),autores:$("#c-aut").value.trim(),colecao:($("#c-col")?$("#c-col").value.trim():""),isbn_fisico:($("#c-isbnf")?$("#c-isbnf").value.trim():""),isbn_digital:($("#c-isbnd")?$("#c-isbnd").value.trim():""),...(temCol("isbn_original")&&$("#c-isbno")?{isbn_original:$("#c-isbno").value.trim()}:{}),...(temCol("paginas")&&$("#c-pag")?{paginas:parseInt($("#c-pag").value,10)||null}:{}),dono:$("#c-dono").value,status:$("#c-st").value,cur:$("#c-cur").value,done:[],obs:$("#c-obs").value.trim(),prioridade:0});closeEditor();tab="prod";render();return;}
+ if(e.target.id==="c-save"){const t=$("#c-ori").value.trim()||$("#c-tit").value.trim();if(!t){$("#c-ori").focus();return;}addProd({selo:$("#c-selo").value,titulo:$("#c-tit").value.trim(),original:$("#c-ori").value.trim(),autores:$("#c-aut").value.trim(),colecao:($("#c-col")?$("#c-col").value.trim():""),...(temCol("capa_agente")&&$("#c-ag")?{capa_agente:$("#c-ag").value.trim()}:{}),isbn_fisico:($("#c-isbnf")?$("#c-isbnf").value.trim():""),isbn_digital:($("#c-isbnd")?$("#c-isbnd").value.trim():""),...(temCol("isbn_original")&&$("#c-isbno")?{isbn_original:$("#c-isbno").value.trim()}:{}),...(temCol("paginas")&&$("#c-pag")?{paginas:parseInt($("#c-pag").value,10)||null}:{}),dono:$("#c-dono").value,status:$("#c-st").value,cur:$("#c-cur").value,done:[],obs:$("#c-obs").value.trim(),prioridade:0});closeEditor();tab="prod";render();return;}
  if(e.target.id==="logout"){if(sb)sb.auth.signOut().then(()=>location.reload());return;}
 });
 function _refoca(id){const el=document.getElementById(id);if(!el)return;const v=el.value;el.focus();
