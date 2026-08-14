@@ -342,16 +342,19 @@ function capaStatusLabel(p){
  if(p.capa_status_manual)return p.capa_status_manual; /* override manual definido no pop-up da capa */
  const s=((p.capa_situacao||'')+' '+(p.capa_status||'')).toLowerCase();
  const pronta=s.includes('conclu')||s.includes('adquir');
+ const negociando=s.includes('negocia'); /* capa ainda em negociação de direitos — não é "em produção" */
  const g=Object.values(p.capa_aprovacoes||{});const nApro=g.filter(v=>v==='aprovado').length;const allApro=g.length>0&&nApro===g.length;
  const temAlgo=(p.capa_situacao&&p.capa_situacao!=='— A definir')||!!p.capa_status||!!p.capa_img||!!p.capa_envio_aprovacao||nApro>0||g.some(v=>v==='recusado');
  if(capaUsaAprovacao(p)){
   if(allApro)return 'Aprovada';
   if(pronta)return 'Pronta - Em aprovação';
   if(nApro>0||g.some(v=>v==='recusado'))return 'Em aprovação';
+  if(negociando)return 'Em negociação';
   return temAlgo?'Em produção':'A definir';
  }
  if(p.capa_envio_aprovacao){if(p.capa_aprovada_agencia)return 'Aprovada';return pronta?'Pronta - Em aprovação':'Em aprovação';} /* enviada p/ aprovação da agência */
  if(pronta)return 'Pronta';
+ if(negociando)return 'Em negociação';
  return temAlgo?'Em produção':'A definir';
 }
 function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
@@ -368,7 +371,7 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const disc=p.discord_url?'<a class="disc" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">Discord ↗</a>':'';
  const inl='<div class="inline" onclick="event.stopPropagation()"><select data-inline="cur" data-id="'+p.id+'"><option value="">etapa…</option>'+st.map(k=>'<option value="'+k+'" '+(p.cur===k?"selected":"")+'>'+(STAGE_LABELS[k]||k)+'</option>').join("")+'</select>'
   +'<select data-inline="prioridade" data-id="'+p.id+'">'+[[0,"prio —"],[1,"Baixa"],[2,"Média"],[3,"Alta"],[4,"Altíssima"]].map(x=>'<option value="'+x[0]+'" '+((p.prioridade||0)===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></div>';
- const capaStatus=capaStatusLabel(p);const capaCor=(capaStatus==='Aprovada'||capaStatus==='Pronta')?'#2E5A3E':(capaStatus.indexOf('aprova')>=0?'#B8862F':'#6b6b6b');
+ const capaStatus=capaStatusLabel(p);const capaCor=(capaStatus==='Aprovada'||capaStatus==='Pronta')?'#2E5A3E':(capaStatus==='Em negociação'?'#5A5A8A':(capaStatus.indexOf('aprova')>=0?'#B8862F':'#6b6b6b'));
  const CW=prodCols===2?132:184,CH=prodCols===2?188:262,TB=prodCols===2?200:440;
  const capaCol='<div style="flex:none;width:'+CW+'px;display:flex;flex-direction:column;gap:6px;align-items:center;align-self:flex-start">'
   +'<span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;width:'+CW+'px;height:'+CH+'px;border-radius:8px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f4f2ee;'+(p.capa_img?'':'font-size:12px;letter-spacing:.05em;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:cover">':'CAPA')+'</span>'
@@ -415,7 +418,7 @@ function viewCoord(){
  return h+'</tbody></table></div>';
 }
 function viewCapas(){
- const CAPA_FILT_OPTS=[['todas','Todas'],['A definir','A definir'],['Em produção','Em produção'],['Em aprovação','Em aprovação'],['Aprovada','Aprovada'],['Pronta','Pronta']];
+ const CAPA_FILT_OPTS=[['todas','Todas'],['A definir','A definir'],['Em negociação','Em negociação'],['Em produção','Em produção'],['Em aprovação','Em aprovação'],['Aprovada','Aprovada'],['Pronta','Pronta']];
  let h='<div class="controls"><button class="chip" aria-pressed="'+(filt.sel==="all")+'" data-sel="all">Todos</button>'
   +SELOS.map(s=>'<button class="chip" aria-pressed="'+(filt.sel===s)+'" data-sel="'+s+'">'+s+'</button>').join("")
   +'<input type="search" id="q" placeholder="Buscar capa" value="'+esc(filt.q)+'"></div>'
