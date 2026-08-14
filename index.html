@@ -1059,7 +1059,13 @@ function openEditor(id){
   +''
   +'<label class="f">Link do Discord</label><input type="text" id="e-disc" value="'+esc(p.discord_url||"")+'" style="width:100%">'
   +'<label class="f">Pasta do Drive</label><input type="text" id="e-drive" value="'+esc(p.drive_url||"")+'" placeholder="cole o link da pasta do Google Drive" style="width:100%">'
-  +'<div class="dact" style="margin-top:8px"><button class="btn" id="e-msgini" style="flex:1">📢 Gerar mensagem de início (Discord)</button></div>'
+  +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:6px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gc)">Mensagens para o Discord</span></div>'
+  +(temCol("sinopse")?'<label class="f">Sobre a obra (sinopse) — usada na oferta ao estúdio</label><textarea id="e-sinopse" placeholder="sinopse da obra (opcional; respeita quebras de linha)" style="width:100%;min-height:70px">'+esc(p.sinopse||"")+'</textarea>':'')
+  +(temCol("sobre_autor")?'<label class="f">Sobre a autoria</label><textarea id="e-sobreaut" placeholder="mini-bio da autora/autor (opcional)" style="width:100%;min-height:60px">'+esc(p.sobre_autor||"")+'</textarea>':'')
+  +'<label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;cursor:pointer;font-size:12px;color:var(--muted)"><input type="checkbox" id="e-inctextos" checked style="margin-top:3px"><span>Incluir <b>Sobre a obra</b> e <b>Sobre a autora</b> na oferta ao estúdio.<br>Desmarque para a versão simples (tipo a da Luana).</span></label>'
+  +'<div class="dact" style="margin-top:4px;flex-wrap:wrap;gap:6px"><button class="btn" id="e-msgini" style="flex:1 1 100%">📢 Mensagem de início (para quem já pegou)</button>'
+  +'<button class="btn" id="e-msgest" style="flex:1 1 45%">🎨 Oferecer ao estúdio</button>'
+  +'<button class="btn" id="e-msgcopi" style="flex:1 1 45%">✍️ Oferecer Copi/Revisão</button></div>'
   +'<textarea id="e-msgout" style="width:100%;min-height:150px;font-size:12px;display:none"></textarea>'
   +'<div class="dact" id="e-msgact" style="display:none"><button class="btn" id="e-msgcopy" style="flex:1">Copiar mensagem</button></div>'
   +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:6px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gc)">Contrato &amp; pagamento — por etapa</span></div>'
@@ -1077,13 +1083,15 @@ function openEditor(id){
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#e-cancel").onclick=closeEditor;
  if($("#e-msgini"))$("#e-msgini").onclick=()=>{const t=$("#e-msgout");t.value=msgInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Mensagem gerada — confira e copie pro canal do Discord.");};
+ if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
+ if($("#e-msgcopi"))$("#e-msgcopi").onclick=()=>{const t=$("#e-msgout");t.value=msgOfertaCopiRev(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta de Copi/Revisão gerada — confira e copie pro Discord.");};
  if($("#e-msgcopy"))$("#e-msgcopy").onclick=()=>{copiarTexto($("#e-msgout").value,"Mensagem copiada — cole no canal do Discord.");};
  $("#e-save").onclick=async()=>{const done=[...d.querySelectorAll("#e-done input:checked")].map(i=>i.value);
   const fr=[...d.querySelectorAll("#e-frentes input:checked")].map(i=>i.value);const prz=Object.assign({},p.prazos||{});const _ck=$("#e-cur").value;if(_ck)prz[_ck]={inicio:$("#e-pzini").value||"",dias:parseInt($("#e-pzdias").value||20,10)};
   const pag={};d.querySelectorAll("[data-pag]").forEach(s=>{if(s.value)pag[s.dataset.pag]=s.value;});
   const _ini=$("#e-ini").value||null;let _prazo=$("#e-prazo").value||null;
   if(_ini&&!_prazo){const dd=new Date(_ini+"T00:00:00");if(!isNaN(dd)){dd.setMonth(dd.getMonth()+3);_prazo=dd.getFullYear()+'-'+('0'+(dd.getMonth()+1)).slice(-2)+'-'+('0'+dd.getDate()).slice(-2);}}
-  await patchProd(p.id,{titulo:$("#e-tit").value.trim(),original:$("#e-ori").value.trim(),autores:$("#e-aut").value.trim(),status:$("#e-st").value,dono:$("#e-dono").value,done,cur:$("#e-cur").value,prioridade:parseInt($("#e-prio").value,10),prazo:_prazo,local:$("#e-local").value,frentes:fr,prazos:prz,resp_estudio:$("#e-re").value.trim(),resp_copi:(ehFiccao(p.selo)&&$("#e-rc")?$("#e-rc").value.trim():""),resp_revisao:$("#e-rr").value.trim(),resp_capista:$("#e-rk").value.trim(),...(ehFiccao(p.selo)&&$("#e-rd")&&temCol("resp_design")?{resp_design:$("#e-rd").value.trim()}:{}),...(!ehFiccao(p.selo)&&$("#e-rtipo")&&temCol("revisao_tipo")?{revisao_tipo:$("#e-rtipo").value}:{}),amazon_url:$("#e-amz").value.trim(),colecao:$("#e-col").value.trim(),isbn_fisico:($("#e-isbnf")?$("#e-isbnf").value.trim():""),isbn_digital:($("#e-isbnd")?$("#e-isbnd").value.trim():""),...(temCol("isbn_original")&&$("#e-isbno")?{isbn_original:$("#e-isbno").value.trim()}:{}),data_inicio:$("#e-ini").value||null,...(temCol("paginas")&&$("#e-pag")?{paginas:parseInt($("#e-pag").value,10)||null}:{}),bloqueio_desde:$("#e-blod").value||null,discord_url:$("#e-disc").value.trim(),...(temCol("drive_url")&&$("#e-drive")?{drive_url:$("#e-drive").value.trim()}:{}),pagamentos:pag,...(role==="coord"&&$("#e-dir")?{direitos_status:$("#e-dir").value}:{}),obs:$("#e-obs").value.trim()});
+  await patchProd(p.id,{titulo:$("#e-tit").value.trim(),original:$("#e-ori").value.trim(),autores:$("#e-aut").value.trim(),status:$("#e-st").value,dono:$("#e-dono").value,done,cur:$("#e-cur").value,prioridade:parseInt($("#e-prio").value,10),prazo:_prazo,local:$("#e-local").value,frentes:fr,prazos:prz,resp_estudio:$("#e-re").value.trim(),resp_copi:(ehFiccao(p.selo)&&$("#e-rc")?$("#e-rc").value.trim():""),resp_revisao:$("#e-rr").value.trim(),resp_capista:$("#e-rk").value.trim(),...(ehFiccao(p.selo)&&$("#e-rd")&&temCol("resp_design")?{resp_design:$("#e-rd").value.trim()}:{}),...(!ehFiccao(p.selo)&&$("#e-rtipo")&&temCol("revisao_tipo")?{revisao_tipo:$("#e-rtipo").value}:{}),amazon_url:$("#e-amz").value.trim(),colecao:$("#e-col").value.trim(),isbn_fisico:($("#e-isbnf")?$("#e-isbnf").value.trim():""),isbn_digital:($("#e-isbnd")?$("#e-isbnd").value.trim():""),...(temCol("isbn_original")&&$("#e-isbno")?{isbn_original:$("#e-isbno").value.trim()}:{}),data_inicio:$("#e-ini").value||null,...(temCol("paginas")&&$("#e-pag")?{paginas:parseInt($("#e-pag").value,10)||null}:{}),bloqueio_desde:$("#e-blod").value||null,discord_url:$("#e-disc").value.trim(),...(temCol("drive_url")&&$("#e-drive")?{drive_url:$("#e-drive").value.trim()}:{}),...(temCol("sinopse")&&$("#e-sinopse")?{sinopse:$("#e-sinopse").value.trim()}:{}),...(temCol("sobre_autor")&&$("#e-sobreaut")?{sobre_autor:$("#e-sobreaut").value.trim()}:{}),pagamentos:pag,...(role==="coord"&&$("#e-dir")?{direitos_status:$("#e-dir").value}:{}),obs:$("#e-obs").value.trim()});
   render();openEditor(p.id);toast("salvo");};
  function renderPendED(){const its=funcoes.filter(f=>f.obra_id===p.id);const box=$("#e-pendlist");if(!box)return;
   box.innerHTML=its.length?its.map(f=>'<div style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-ep="'+f.id+'" '+(f.status==="feito"?"checked":"")+'><span style="flex:1;font-size:12px;'+(f.status==="feito"?"text-decoration:line-through;opacity:.5":"")+'">'+(f.etapa?'<b>['+esc(STAGE_LABELS[f.etapa]||f.etapa)+']</b> ':'')+esc(f.titulo_demanda||f.descricao||"")+' <span class="util" style="color:var(--muted)">· '+esc(f.atribuido_a||"")+(f.prazo?' · '+esc(dBR(f.prazo)):'')+'</span></span><button class="btn" data-epdel="'+f.id+'" style="padding:1px 8px" title="excluir">✕</button></div>').join(""):'<div class="util" style="font-size:11px;color:var(--muted)">Nenhuma pendência registrada.</div>';
@@ -1255,6 +1263,50 @@ function msgInicioProd(p){
  s+='Capa: '+capa+'\n';
  if(p.drive_url)s+='\nArquivos encontram-se em: '+p.drive_url+'\n';
  s+='\nBom trabalho!';
+ return s;
+}
+function saudacaoHora(){const h=(new Date()).getHours();return h<12?'Bom dia':(h<18?'Boa tarde':'Boa noite');}
+/* Oferta ao ESTÚDIO (tradução/texto) — formato completo da Isabella. incTextos: inclui "Sobre a obra/autora".
+   sin/bio: textos vindos dos campos abertos no editor (podem não estar salvos ainda). */
+function msgOfertaEstudio(p, incTextos, sin, bio){
+ const orig=p.original||p.titulo||'—';
+ const aut=p.autores||'—';
+ const amz=p.amazon_url||'';
+ const pag=p.paginas||'';
+ let s=saudacaoHora()+', @everyone! 📚\n';
+ s+='Nova liberação de produção → **'+(p.selo||'')+'**\n';
+ s+='*'+orig+'*, de '+aut+'\n';
+ s+='__Apto para início de produção imediata__\n';
+ if(incTextos){
+  const sinT=((sin!=null?sin:(p.sinopse||''))).trim();
+  const bioT=((bio!=null?bio:(p.sobre_autor||''))).trim();
+  s+='\n- **Sobre a obra**:\n'+(sinT||'[⚠ escreva a sinopse aqui ou apague esta seção]')+'\n';
+  s+='\n- **Sobre a autora**:\n'+(bioT||'[⚠ escreva sobre a autoria aqui ou apague esta seção]')+'\n';
+ }
+ if(amz)s+='\nLink da Amazon para espiar o original: '+amz+'\n';
+ if(pag)s+='Paginação do original: '+pag+' páginas\n';
+ s+='Quem tiver interesse na produção, favor me acionar no privado 😉';
+ return s;
+}
+/* Oferta de COPIDESQUE + REVISÃO — formato da Isabella. */
+function msgOfertaCopiRev(p){
+ const orig=p.original||'';
+ const amz=p.amazon_url||'';
+ const pag=p.paginas||'';
+ const pz=(p.prazos||{});
+ let dt='';
+ if(pz.copidesque&&pz.copidesque.inicio)dt=dBR(pz.copidesque.inicio);
+ else if(pz.copi&&pz.copi.inicio)dt=dBR(pz.copi.inicio);
+ let s=saudacaoHora()+', @everyone! 📚\n';
+ s+='**Copidesque E Revisão gramatical disponíveis**\n';
+ s+='Título: '+(p.titulo||'A definir')+' (provisório), de '+(p.autores||'—')+'\n';
+ s+='Original: '+orig+'\n';
+ s+='Selo: '+(p.selo||'')+'\n';
+ s+='Idioma original: inglês\n';
+ if(pag)s+='Paginação original: '+pag+' páginas\n';
+ if(amz)s+='Link do original: '+amz+'\n';
+ s+='**Data de início provável (copi): '+(dt||'[a definir]')+'**\n';
+ s+='Quem tiver interesse, por favor, fale comigo no privado.';
  return s;
 }
 function copiarTexto(t,msg){if(!t)return;try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(()=>toast(msg||"Copiado."),()=>toast(msg||"Copiado."));}else toast("Selecione e copie manualmente.","err");}catch(e){toast("Selecione e copie manualmente.","err");}}
