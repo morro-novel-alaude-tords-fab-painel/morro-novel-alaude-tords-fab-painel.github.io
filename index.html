@@ -255,7 +255,7 @@ const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
 let prod=[],estoque=[],reimp=[],tab="prod",filt={sel:"all",q:"",mine:false,prio:false,venc:false},collapsed={},prodLoadOk=false;
-let funcView="lista",calRef=0,calWho="todos",funcSort="prazo";
+let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas";
 function sortFuncs(a,b){
  if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
  if(funcSort==="prioridade"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (ob?prioEff(ob):-1)-(oa?prioEff(oa):-1);}
@@ -332,12 +332,21 @@ function openPrestadorPop(nome){
  h+='<div class="dact"><button class="btn" id="pp-close" style="flex:1">Fechar</button></div>';
  d.innerHTML=h;d.classList.add("on");$("#scrim").classList.add("on");$("#dx").onclick=$("#pp-close").onclick=closeEditor;
 }
+function capaUsaAprovacao(p){
+ const s=((p.capa_situacao||'')+' '+(p.capa_status||'')).toLowerCase();const tipo=(p.tipo_capa||'').toLowerCase();
+ if(s.includes('adquir')||tipo.includes('adquir'))return false;   /* comprada/adquirida pronta: sem aprovação */
+ if(tipo.includes('negociad'))return true;                        /* original negociada: precisa da aprovação da editora estrangeira */
+ return !ehFiccao(p.selo);                                        /* Alaúde (não-ficção) original: aprovação ASV. Ficção in-house: sem aprovação */
+}
 function capaStatusLabel(p){
  const s=((p.capa_situacao||'')+' '+(p.capa_status||'')).toLowerCase();
- const g=Object.values(p.capa_aprovacoes||{});const nApro=g.filter(v=>v==='aprovado').length;const allApro=g.length>0&&nApro===g.length;
- if(allApro||s.includes('conclu')||s.includes('adquir'))return 'Aprovada';
- if(nApro>0||g.some(v=>v==='recusado')||s.includes('aprova'))return 'Em aprovação';
- return 'Em produção';
+ const pronta=s.includes('conclu')||s.includes('adquir');
+ if(capaUsaAprovacao(p)){
+  const g=Object.values(p.capa_aprovacoes||{});const nApro=g.filter(v=>v==='aprovado').length;const allApro=g.length>0&&nApro===g.length;
+  if(allApro)return 'Aprovada';
+  return pronta?'Pronta - Em aprovação':'Em aprovação';
+ }
+ return pronta?'Pronta':'Em produção';
 }
 function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const pe=prioEff(p);const manual=p.prioridade||0;
@@ -353,17 +362,17 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const disc=p.discord_url?'<a class="disc" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">Discord ↗</a>':'';
  const inl='<div class="inline" onclick="event.stopPropagation()"><select data-inline="cur" data-id="'+p.id+'"><option value="">etapa…</option>'+st.map(k=>'<option value="'+k+'" '+(p.cur===k?"selected":"")+'>'+(STAGE_LABELS[k]||k)+'</option>').join("")+'</select>'
   +'<select data-inline="prioridade" data-id="'+p.id+'">'+[[0,"prio —"],[1,"Baixa"],[2,"Média"],[3,"Alta"],[4,"Altíssima"]].map(x=>'<option value="'+x[0]+'" '+((p.prioridade||0)===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></div>';
- const capaStatus=capaStatusLabel(p);const capaCor=capaStatus==='Aprovada'?'#2E5A3E':(capaStatus==='Em aprovação'?'#B8862F':'#6b6b6b');
- const capaCol='<div style="flex:none;width:116px;display:flex;flex-direction:column;gap:6px;align-items:center">'
-  +'<span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;width:116px;height:166px;border-radius:7px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f4f2ee;'+(p.capa_img?'':'font-size:12px;letter-spacing:.05em;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:cover">':'CAPA')+'</span>'
-  +'<span title="status da capa" style="font-size:10px;font-weight:600;text-align:center;line-height:1.15;color:#fff;background:'+capaCor+';border-radius:6px;padding:3px 6px;width:100%;box-sizing:border-box">'+capaStatus+'</span></div>';
- return '<div class="row'+((p.bloqueio||p.bloqueio_desde)?' hasbloq':'')+'" data-id="'+p.id+'" style="--gc:'+c.c+'"><div style="display:flex;gap:15px;align-items:stretch">'+capaCol+'<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between">'
+ const capaStatus=capaStatusLabel(p);const capaCor=(capaStatus==='Aprovada'||capaStatus==='Pronta')?'#2E5A3E':(capaStatus.indexOf('aprova')>=0?'#B8862F':'#6b6b6b');
+ const capaCol='<div style="flex:none;width:184px;display:flex;flex-direction:column;gap:7px;align-items:center;align-self:center">'
+  +'<span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;width:184px;height:262px;border-radius:8px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f4f2ee;'+(p.capa_img?'':'font-size:14px;letter-spacing:.05em;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:cover">':'CAPA')+'</span>'
+  +'<span title="status da capa" style="font-size:11px;font-weight:600;text-align:center;line-height:1.15;color:#fff;background:'+capaCor+';border-radius:6px;padding:4px 6px;width:100%;box-sizing:border-box">'+capaStatus+'</span></div>';
+ return '<div class="row'+((p.bloqueio||p.bloqueio_desde)?' hasbloq':'')+'" data-id="'+p.id+'" style="--gc:'+c.c+';display:flex;gap:22px;align-items:stretch;flex-wrap:wrap">'+capaCol+'<div style="flex:0 1 380px;min-width:0;display:flex;flex-direction:column;justify-content:space-between">'
  +'<div>'
  +'<div class="rt">'+esc(p.original||p.titulo)+'<span class="pill">'+esc(p.status||"")+'</span>'+prio+dir+prazoBadge(p)+'</div>'
  +'<div class="ra">'+((p.original&&p.titulo)?esc(p.titulo)+' · ':"")+esc(p.autores||"")+((p.colecao&&p.colecao!=="Não")?' · <span class="dp" style="font-size:9px;padding:1px 6px">coleção</span>':"")+'</div>'+blo+'</div><div>'
  +'<div class="rfoot" style="font-size:12px;gap:8px"><span class="dp '+esc(p.dono)+'" style="font-size:12px;padding:4px 11px">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
  +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'</div>'
- +'</div></div></div><div>'+trilha(p)+inl+'</div></div>';}
+ +'</div></div><div style="flex:1 1 260px;min-width:0;align-self:center">'+trilha(p)+inl+'</div></div>';}
 
 function prodListHTML(){
  const q=filt.q.toLowerCase();
@@ -396,11 +405,15 @@ function viewCoord(){
  return h+'</tbody></table></div>';
 }
 function viewCapas(){
+ const CAPA_FILT_OPTS=[['todas','Todas'],['Em produção','Em produção'],['Em aprovação','Em aprovação'],['Aprovada','Aprovada'],['Pronta','Pronta']];
  let h='<div class="controls"><button class="chip" aria-pressed="'+(filt.sel==="all")+'" data-sel="all">Todos</button>'
   +SELOS.map(s=>'<button class="chip" aria-pressed="'+(filt.sel===s)+'" data-sel="'+s+'">'+s+'</button>').join("")
-  +'<input type="search" id="q" placeholder="Buscar capa" value="'+esc(filt.q)+'"></div>';
+  +'<input type="search" id="q" placeholder="Buscar capa" value="'+esc(filt.q)+'"></div>'
+  +'<div class="controls" style="margin-top:8px"><span class="util" style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px">Status da capa:</span>'+CAPA_FILT_OPTS.map(o=>'<button class="chip" aria-pressed="'+(capaFilt===o[0])+'" data-capafilt="'+o[0]+'">'+o[1]+'</button>').join("")+'</div>';
  const q=filt.q.toLowerCase();
- const items=prod.filter(p=>{if(filt.sel!=="all"&&p.selo!==filt.sel)return false;return !q||(p.titulo||'').toLowerCase().includes(q)||(p.original||'').toLowerCase().includes(q);});
+ const items=prod.filter(p=>{if(filt.sel!=="all"&&p.selo!==filt.sel)return false;
+   if(capaFilt!=="todas"){const st=capaStatusLabel(p);const ok=capaFilt==="Em aprovação"?(st.indexOf("aprova")>=0&&st!=="Aprovada"):(capaFilt==="Pronta"?(st.indexOf("Pronta")>=0):st===capaFilt);if(!ok)return false;}
+   return !q||(p.titulo||'').toLowerCase().includes(q)||(p.original||'').toLowerCase().includes(q);});
  const grupos=SELOS.filter(s=>items.some(p=>p.selo===s));
  if(!grupos.length)return h+'<div class="empty">Nada aqui com esse filtro.</div>';
  h+=grupos.map(s=>{const cc=cfg(s);const rows=items.filter(p=>p.selo===s);const ck='cap:'+s;
@@ -1070,7 +1083,7 @@ function openCapa(id){
   +'<div><label class="f">Shutterstock</label><select id="cap-sh" style="width:100%">'+SHUTTER.map(o=>'<option '+(p.capa_shutter===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
   +'<label class="f">Agente / contato</label><input type="text" id="cap-ag" value="'+esc(p.capa_agente||"")+'" style="width:100%">'
   +'<label class="f">Tipo de capa</label><select id="cap-tipo" style="width:100%">'+TIPO_CAPA.map(o=>'<option '+(p.tipo_capa===o?"selected":"")+'>'+o+'</option>').join("")+'</select>'
-  +((((p.capa_status||"")+(p.capa_situacao||"")).toLowerCase().includes("adquir"))?'<div class="util" style="font-size:11px;color:var(--muted);margin-top:12px">Capa adquirida — sem etapas de aprovação (Frente e Capa aberta valem só para capa original).</div>':'<label class="f">Aprovações da capa</label>'+GATES.map(g=>{const cur=((p.capa_aprovacoes||{})[g[0]])||"pendente";return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="util" style="font-size:11px;flex:1;color:var(--muted)">'+g[1]+'</span><select class="mini" data-gate="'+g[0]+'">'+GATE_ST.map(s=>'<option '+(cur===s?"selected":"")+'>'+s+'</option>').join("")+'</select></div>';}).join(""))
+  +((!capaUsaAprovacao(p))?'<div class="util" style="font-size:11px;color:var(--muted);margin-top:12px">'+(ehFiccao(p.selo)?'Capa de ficção in-house — não passa por aprovação.':'Capa comprada/adquirida — sem etapas de aprovação.')+' (Frente e Capa aberta valem só para capa original de Alaúde.)</div>':'<label class="f">Aprovações da capa</label>'+GATES.map(g=>{const cur=((p.capa_aprovacoes||{})[g[0]])||"pendente";return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="util" style="font-size:11px;flex:1;color:var(--muted)">'+g[1]+'</span><select class="mini" data-gate="'+g[0]+'">'+GATE_ST.map(s=>'<option '+(cur===s?"selected":"")+'>'+s+'</option>').join("")+'</select></div>';}).join(""))
   +'<label class="f">Observações</label><textarea id="cap-obs" style="width:100%;min-height:70px">'+esc(p.capa_obs||"")+'</textarea>'
   +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:6px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gc)">E-mail de negociação de capa</span></div>'
   +'<div class="util" style="font-size:11px;color:var(--muted);margin:2px 0 6px"><b>Internacional (EN):</b> pra editora/agência estrangeira. <b>Nacional (PT):</b> pra agência no Brasil (modelo Agência Riff). Depois clique em <b>Copiar capa</b> lá em cima e anexe/cole no e-mail.</div>'
@@ -1345,6 +1358,7 @@ document.body.addEventListener("click",e=>{
  const fvw=e.target.closest("[data-funcview]");if(fvw){funcView=fvw.dataset.funcview;$("#view").innerHTML=viewFuncoes();return;}
  const cnav=e.target.closest("[data-calnav]");if(cnav){calRef+=parseInt(cnav.dataset.calnav,10);$("#view").innerHTML=viewFuncoes();return;}
  const cwho=e.target.closest("[data-calwho]");if(cwho){calWho=cwho.dataset.calwho;$("#view").innerHTML=viewFuncoes();return;}
+ const cfl=e.target.closest("[data-capafilt]");if(cfl){capaFilt=cfl.dataset.capafilt;$("#view").innerHTML=viewCapas();return;}
  const oob=e.target.closest("[data-openobra]");if(oob){const np2=$("#notifpanel");if(np2)np2.classList.remove("on");const ns2=$("#notifscrim");if(ns2)ns2.classList.remove("on");openEditor(oob.dataset.openobra);return;}
  const efx=e.target.closest("[data-editfunc]");if(efx){npEdit=efx.dataset.editfunc;const np=$("#notifpanel");if(!np.classList.contains("on")){np.classList.add("on");$("#notifscrim").classList.add("on");}buildNotifPanel();return;}
  const dfx=e.target.closest("[data-delfunc]");if(dfx){delFuncao(dfx.dataset.delfunc);return;}
