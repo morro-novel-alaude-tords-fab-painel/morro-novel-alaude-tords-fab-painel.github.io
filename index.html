@@ -255,7 +255,7 @@ const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
 let prod=[],estoque=[],reimp=[],tab="prod",filt={sel:"all",q:"",mine:false,prio:false,venc:false},collapsed={},prodLoadOk=false;
-let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas";
+let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=1;
 function sortFuncs(a,b){
  if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
  if(funcSort==="prioridade"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (ob?prioEff(ob):-1)-(oa?prioEff(oa):-1);}
@@ -339,14 +339,20 @@ function capaUsaAprovacao(p){
  return !ehFiccao(p.selo);                                        /* Alaúde (não-ficção) original: aprovação ASV. Ficção in-house: sem aprovação */
 }
 function capaStatusLabel(p){
+ if(p.capa_status_manual)return p.capa_status_manual; /* override manual definido no pop-up da capa */
  const s=((p.capa_situacao||'')+' '+(p.capa_status||'')).toLowerCase();
  const pronta=s.includes('conclu')||s.includes('adquir');
+ const g=Object.values(p.capa_aprovacoes||{});const nApro=g.filter(v=>v==='aprovado').length;const allApro=g.length>0&&nApro===g.length;
+ const temAlgo=(p.capa_situacao&&p.capa_situacao!=='— A definir')||!!p.capa_status||!!p.capa_img||!!p.capa_envio_aprovacao||nApro>0||g.some(v=>v==='recusado');
  if(capaUsaAprovacao(p)){
-  const g=Object.values(p.capa_aprovacoes||{});const nApro=g.filter(v=>v==='aprovado').length;const allApro=g.length>0&&nApro===g.length;
   if(allApro)return 'Aprovada';
-  return pronta?'Pronta - Em aprovação':'Em aprovação';
+  if(pronta)return 'Pronta - Em aprovação';
+  if(nApro>0||g.some(v=>v==='recusado'))return 'Em aprovação';
+  return temAlgo?'Em produção':'A definir';
  }
- return pronta?'Pronta':'Em produção';
+ if(p.capa_envio_aprovacao){if(p.capa_aprovada_agencia)return 'Aprovada';return pronta?'Pronta - Em aprovação':'Em aprovação';} /* enviada p/ aprovação da agência */
+ if(pronta)return 'Pronta';
+ return temAlgo?'Em produção':'A definir';
 }
 function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const pe=prioEff(p);const manual=p.prioridade||0;
@@ -363,22 +369,24 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const inl='<div class="inline" onclick="event.stopPropagation()"><select data-inline="cur" data-id="'+p.id+'"><option value="">etapa…</option>'+st.map(k=>'<option value="'+k+'" '+(p.cur===k?"selected":"")+'>'+(STAGE_LABELS[k]||k)+'</option>').join("")+'</select>'
   +'<select data-inline="prioridade" data-id="'+p.id+'">'+[[0,"prio —"],[1,"Baixa"],[2,"Média"],[3,"Alta"],[4,"Altíssima"]].map(x=>'<option value="'+x[0]+'" '+((p.prioridade||0)===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></div>';
  const capaStatus=capaStatusLabel(p);const capaCor=(capaStatus==='Aprovada'||capaStatus==='Pronta')?'#2E5A3E':(capaStatus.indexOf('aprova')>=0?'#B8862F':'#6b6b6b');
- const capaCol='<div style="flex:none;width:184px;display:flex;flex-direction:column;gap:7px;align-items:center;align-self:center">'
-  +'<span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;width:184px;height:262px;border-radius:8px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f4f2ee;'+(p.capa_img?'':'font-size:14px;letter-spacing:.05em;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:cover">':'CAPA')+'</span>'
+ const CW=prodCols===2?132:184,CH=prodCols===2?188:262,TB=prodCols===2?200:440;
+ const capaCol='<div style="flex:none;width:'+CW+'px;display:flex;flex-direction:column;gap:6px;align-items:center;align-self:flex-start">'
+  +'<span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;width:'+CW+'px;height:'+CH+'px;border-radius:8px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f4f2ee;'+(p.capa_img?'':'font-size:12px;letter-spacing:.05em;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:cover">':'CAPA')+'</span>'
   +'<span title="status da capa" style="font-size:11px;font-weight:600;text-align:center;line-height:1.15;color:#fff;background:'+capaCor+';border-radius:6px;padding:4px 6px;width:100%;box-sizing:border-box">'+capaStatus+'</span></div>';
- return '<div class="row'+((p.bloqueio||p.bloqueio_desde)?' hasbloq':'')+'" data-id="'+p.id+'" style="--gc:'+c.c+';display:flex;gap:22px;align-items:stretch;flex-wrap:wrap">'+capaCol+'<div style="flex:0 1 380px;min-width:0;display:flex;flex-direction:column;justify-content:space-between">'
- +'<div>'
+ return '<div class="row'+((p.bloqueio||p.bloqueio_desde)?' hasbloq':'')+'" data-id="'+p.id+'" style="--gc:'+c.c+';display:flex;gap:'+(prodCols===2?18:24)+'px;align-items:flex-start;flex-wrap:wrap'+(prodCols===2?';border-top:none':'')+'">'+capaCol+'<div style="flex:1 1 '+TB+'px;min-width:0">'
  +'<div class="rt">'+esc(p.original||p.titulo)+'<span class="pill">'+esc(p.status||"")+'</span>'+prio+dir+prazoBadge(p)+'</div>'
- +'<div class="ra">'+((p.original&&p.titulo)?esc(p.titulo)+' · ':"")+esc(p.autores||"")+((p.colecao&&p.colecao!=="Não")?' · <span class="dp" style="font-size:9px;padding:1px 6px">coleção</span>':"")+'</div>'+blo+'</div><div>'
- +'<div class="rfoot" style="font-size:12px;gap:8px"><span class="dp '+esc(p.dono)+'" style="font-size:12px;padding:4px 11px">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
+ +'<div class="ra">'+((p.original&&p.titulo)?esc(p.titulo)+' · ':"")+esc(p.autores||"")+((p.colecao&&p.colecao!=="Não")?' · <span class="dp" style="font-size:9px;padding:1px 6px">coleção</span>':"")+'</div>'+blo
+ +'<div style="margin:13px 0">'+trilha(p)+inl+'</div>'
+ +'<div class="rfoot" style="font-size:12px;gap:8px;margin-top:10px"><span class="dp '+esc(p.dono)+'" style="font-size:12px;padding:4px 11px">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
  +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'</div>'
- +'</div></div><div style="flex:1 1 260px;min-width:0;align-self:center">'+trilha(p)+inl+'</div></div>';}
+ +'</div></div>';}
 
 function prodListHTML(){
  const q=filt.q.toLowerCase();
  let hit=prod.filter(p=>{if(filt.sel!=="all"&&p.selo!==filt.sel)return false;if(filt.mine&&p.dono!==meNome())return false;if(filt.prio&&(p.prioridade||0)<3)return false;if(p.status==="P&G"||(p.local||'')==='grafica'||(p.local||'')==='estoque')return false;if(filt.venc){const _d=venc(p);if(!(_d!==null&&_d<0))return false;}if(q&&!((p.titulo+" "+(p.original||"")+" "+(p.autores||"")).toLowerCase().includes(q)))return false;return true;});
  return SELOS.filter(s=>hit.some(p=>p.selo===s)).map(s=>{const c=cfg(s);const rows=hit.filter(p=>p.selo===s).sort((a,b)=>prioEff(b)-prioEff(a));
-   return '<div class="selogroup" style="--gc:'+c.c+'"><div class="selohead" data-collapse="'+s+'" style="background:'+c.c+';cursor:pointer"><span class="lc"><img src="'+c.logo+'"></span><span class="sn">'+s+'</span><span class="stag">'+c.tag+'</span><span class="cnt">'+rows.length+' títulos <span style="margin-left:6px;display:inline-block;transition:.15s;transform:rotate('+(collapsed[s]?'-90deg':'0deg')+')">▾</span></span></div>'+(collapsed[s]?'':rows.map(prodRow).join(""))+'</div>';
+   const corpo=collapsed[s]?'':(prodCols===2?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:12px">'+rows.map(p=>'<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)">'+prodRow(p)+'</div>').join("")+'</div>':rows.map(prodRow).join(""));
+   return '<div class="selogroup" style="--gc:'+c.c+'"><div class="selohead" data-collapse="'+s+'" style="background:'+c.c+';cursor:pointer"><span class="lc"><img src="'+c.logo+'"></span><span class="sn">'+s+'</span><span class="stag">'+c.tag+'</span><span class="cnt">'+rows.length+' títulos <span style="margin-left:6px;display:inline-block;transition:.15s;transform:rotate('+(collapsed[s]?'-90deg':'0deg')+')">▾</span></span></div>'+corpo+'</div>';
  }).join("")||'<div class="empty">Nada aqui com esse filtro.</div>';
 }
 function viewProd(){
@@ -389,6 +397,8 @@ function viewProd(){
   +'<button class="chip" aria-pressed="'+filt.mine+'" id="fmine">Minhas obras</button>'
   +'<button class="chip" aria-pressed="'+filt.prio+'" id="fprio">Só Alta</button>'
   +'<input type="search" id="q" placeholder="Buscar título, autor" value="'+esc(filt.q)+'">'
+  +'<button class="chip" aria-pressed="'+(prodCols===1)+'" data-prodcols="1" title="1 livro por linha">▬ 1 col</button>'
+  +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="2 livros por linha">▥ 2 col</button>'
   +'<button class="btn" id="expProd" title="Baixar produção em CSV/Excel">⬇ Exportar</button>'
   +'<button class="btn gold" id="addBtn">+ Cadastrar obra</button></div>'+resumo+'<div id="prodlist">'+prodListHTML()+'</div>';
 }
@@ -405,7 +415,7 @@ function viewCoord(){
  return h+'</tbody></table></div>';
 }
 function viewCapas(){
- const CAPA_FILT_OPTS=[['todas','Todas'],['Em produção','Em produção'],['Em aprovação','Em aprovação'],['Aprovada','Aprovada'],['Pronta','Pronta']];
+ const CAPA_FILT_OPTS=[['todas','Todas'],['A definir','A definir'],['Em produção','Em produção'],['Em aprovação','Em aprovação'],['Aprovada','Aprovada'],['Pronta','Pronta']];
  let h='<div class="controls"><button class="chip" aria-pressed="'+(filt.sel==="all")+'" data-sel="all">Todos</button>'
   +SELOS.map(s=>'<button class="chip" aria-pressed="'+(filt.sel===s)+'" data-sel="'+s+'">'+s+'</button>').join("")
   +'<input type="search" id="q" placeholder="Buscar capa" value="'+esc(filt.q)+'"></div>'
@@ -1078,12 +1088,14 @@ function openCapa(id){
   +'<div style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="file" id="capfile" accept="image/*" class="util" style="flex:1;font-size:12px"><button class="btn" id="cap-crop" style="padding:3px 10px;white-space:nowrap">✂ Cortar frente</button><button class="btn" id="cap-copy" style="padding:3px 10px;white-space:nowrap">📋 Copiar capa</button></div>'
   +'<div class="dact" id="cap-cropact" style="display:none;margin-top:6px"><button class="btn gold" id="cap-cropapply" style="flex:1">Aplicar corte</button><button class="btn" id="cap-cropcancel">Cancelar</button></div>'
   +'<div class="util" style="font-size:11px;color:var(--muted);margin-top:4px">Arraste uma imagem pra cima, cole com Ctrl+V, ou escolha o arquivo. <b>✂ Cortar frente</b>: pra capa aberta, ajuste o quadro na frente e aplique. <b>Copiar capa</b> copia a imagem pro e-mail.</div>'
+  +'<label class="f">Status no painel (como aparece na Produção)</label><select id="cap-stman" style="width:100%"><option value=""'+(!p.capa_status_manual?" selected":"")+'>Automático (pelo tipo / aprovações)</option>'+['A definir','Em produção','Em aprovação','Pronta','Pronta - Em aprovação','Aprovada'].map(o=>'<option '+(p.capa_status_manual===o?"selected":"")+'>'+o+'</option>').join("")+'</select><div class="util" style="font-size:11px;color:var(--muted);margin-top:2px">Deixe em "Automático" pra calcular sozinho, ou fixe um status aqui.</div>'
   +'<div class="grid2"><div><label class="f">Status da capa (negociação)</label><select id="cap-st" style="width:100%">'+CAPA_STATUS.map(o=>'<option '+(p.capa_status===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Situação (produção)</label><select id="cap-sit" style="width:100%">'+CAPA_SIT.map(o=>'<option '+(p.capa_situacao===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
   +'<div class="grid2"><div><label class="f">Status DA (direitos)</label><select id="cap-da" style="width:100%">'+CAPA_DA.map(o=>'<option '+(p.capa_da===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Shutterstock</label><select id="cap-sh" style="width:100%">'+SHUTTER.map(o=>'<option '+(p.capa_shutter===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
   +'<label class="f">Agente / contato</label><input type="text" id="cap-ag" value="'+esc(p.capa_agente||"")+'" style="width:100%">'
-  +'<label class="f">Enviado p/ aprovação (agência) em</label><input type="date" id="cap-envio" value="'+esc(p.capa_envio_aprovacao||"")+'" style="width:100%"><div class="util" style="font-size:11px;color:var(--muted);margin-top:2px">Data em que a capa foi enviada pra agência/editora aprovar (ex.: capas internacionais adquiridas — tipo "enviada aprovação RIFF").</div>'
+  +'<label class="f">Enviado p/ aprovação (agência) em</label><input type="date" id="cap-envio" value="'+esc(p.capa_envio_aprovacao||"")+'" style="width:100%"><div class="util" style="font-size:11px;color:var(--muted);margin-top:2px">Data em que a capa foi enviada pra agência/editora aprovar (ex.: capas internacionais adquiridas — tipo "enviada aprovação RIFF"). Enquanto não for aprovada, o status vira <b>Em aprovação</b>.</div>'
+  +'<label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;font-size:12px;color:var(--muted)"><input type="checkbox" id="cap-aprovag" '+(p.capa_aprovada_agencia?'checked':'')+'> Aprovada pela agência (libera a capa como aprovada)</label>'
   +'<label class="f">Tipo de capa</label><select id="cap-tipo" style="width:100%">'+TIPO_CAPA.map(o=>'<option '+(p.tipo_capa===o?"selected":"")+'>'+o+'</option>').join("")+'</select>'
   +((!capaUsaAprovacao(p))?'<div class="util" style="font-size:11px;color:var(--muted);margin-top:12px">'+(ehFiccao(p.selo)?'Capa de ficção in-house — não passa por aprovação.':'Capa comprada/adquirida — sem etapas de aprovação.')+' (Frente e Capa aberta valem só para capa original de Alaúde.)</div>':'<label class="f">Aprovações da capa</label>'+GATES.map(g=>{const cur=((p.capa_aprovacoes||{})[g[0]])||"pendente";return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="util" style="font-size:11px;flex:1;color:var(--muted)">'+g[1]+'</span><select class="mini" data-gate="'+g[0]+'">'+GATE_ST.map(s=>'<option '+(cur===s?"selected":"")+'>'+s+'</option>').join("")+'</select></div>';}).join(""))
   +'<label class="f">Observações</label><textarea id="cap-obs" style="width:100%;min-height:70px">'+esc(p.capa_obs||"")+'</textarea>'
@@ -1141,7 +1153,7 @@ function openCapa(id){
  $("#cap-emailnac").onclick=()=>{const t=$("#cap-emailout");t.value=emailNegCapaNac(p);t.style.display="block";$("#cap-emailact").style.display="flex";toast("E-mail nacional gerado. Copie e anexe a capa.");};
  $("#cap-emailcopy").onclick=()=>{copiarTexto($("#cap-emailout").value,"E-mail copiado.");};
  $("#dx").onclick=$("#cap-cancel").onclick=closeEditor;
- $("#cap-save").onclick=async()=>{const aprov={};d.querySelectorAll("[data-gate]").forEach(s=>aprov[s.dataset.gate]=s.value);const patch={capa_status:$("#cap-st").value,capa_situacao:$("#cap-sit").value,capa_da:$("#cap-da").value,capa_shutter:$("#cap-sh").value,capa_agente:$("#cap-ag").value.trim(),tipo_capa:$("#cap-tipo").value,capa_aprovacoes:aprov,capa_obs:$("#cap-obs").value.trim()};if(newimg)patch.capa_img=newimg;if(temCol('capa_envio_aprovacao'))patch.capa_envio_aprovacao=$("#cap-envio").value||null;await patchProd(p.id,patch);render();openCapa(p.id);toast("salvo");};
+ $("#cap-save").onclick=async()=>{const aprov={};d.querySelectorAll("[data-gate]").forEach(s=>aprov[s.dataset.gate]=s.value);const patch={capa_status:$("#cap-st").value,capa_situacao:$("#cap-sit").value,capa_da:$("#cap-da").value,capa_shutter:$("#cap-sh").value,capa_agente:$("#cap-ag").value.trim(),tipo_capa:$("#cap-tipo").value,capa_aprovacoes:aprov,capa_obs:$("#cap-obs").value.trim()};if(newimg)patch.capa_img=newimg;if(temCol('capa_envio_aprovacao'))patch.capa_envio_aprovacao=$("#cap-envio").value||null;if(temCol('capa_aprovada_agencia')&&$("#cap-aprovag"))patch.capa_aprovada_agencia=$("#cap-aprovag").checked;if(temCol('capa_status_manual')&&$("#cap-stman"))patch.capa_status_manual=$("#cap-stman").value||null;await patchProd(p.id,patch);render();openCapa(p.id);toast("salvo");};
 }
 function emailNegCapa(p){
  const nome=((meNome()||'Isabella').split(' ')[0]);const tit=p.original||p.titulo||'';
@@ -1361,6 +1373,7 @@ document.body.addEventListener("click",e=>{
  const cnav=e.target.closest("[data-calnav]");if(cnav){calRef+=parseInt(cnav.dataset.calnav,10);$("#view").innerHTML=viewFuncoes();return;}
  const cwho=e.target.closest("[data-calwho]");if(cwho){calWho=cwho.dataset.calwho;$("#view").innerHTML=viewFuncoes();return;}
  const cfl=e.target.closest("[data-capafilt]");if(cfl){capaFilt=cfl.dataset.capafilt;$("#view").innerHTML=viewCapas();return;}
+ const pcl=e.target.closest("[data-prodcols]");if(pcl){prodCols=parseInt(pcl.dataset.prodcols,10);render();return;}
  const oob=e.target.closest("[data-openobra]");if(oob){const np2=$("#notifpanel");if(np2)np2.classList.remove("on");const ns2=$("#notifscrim");if(ns2)ns2.classList.remove("on");openEditor(oob.dataset.openobra);return;}
  const efx=e.target.closest("[data-editfunc]");if(efx){npEdit=efx.dataset.editfunc;const np=$("#notifpanel");if(!np.classList.contains("on")){np.classList.add("on");$("#notifscrim").classList.add("on");}buildNotifPanel();return;}
  const dfx=e.target.closest("[data-delfunc]");if(dfx){delFuncao(dfx.dataset.delfunc);return;}
