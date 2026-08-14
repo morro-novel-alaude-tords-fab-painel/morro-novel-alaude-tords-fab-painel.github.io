@@ -305,11 +305,32 @@ function trilha(p){const st=cfg(p.selo).stages;const fr=(p.frentes&&p.frentes.le
   if(k==="revisao"&&!ehFiccao(p.selo)&&p.revisao_tipo)rot="Rev. "+p.revisao_tipo.slice(0,4)+".";
   const who=quem?'<span class="who2">'+esc(quem)+'</span>':'';
   return '<div class="stop '+c+'"><i></i><span>'+rot+'</span>'+who+'</div>'}).join("")+'</div>';}
+function openPrestadorPop(nome){
+ if(!nome)return;
+ const sa2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+ const tk=t=>sa2(t).split(' ').filter(w=>w&&!['jr','filho','neto','de','da','do','dos','das','e'].includes(w));
+ const alvo=tk(nome);
+ const roles=[['resp_estudio','Estúdio / Tradução'],['resp_design','Design'],['resp_copi','Copidesque'],['resp_revisao','Revisão'],['resp_capista','Capa']];
+ const hits=[];
+ prod.forEach(p=>{if(!emProducao(p))return;roles.forEach(r=>{const t=tk(p[r[0]]||'');if(t.length&&alvo.length&&t[0]===alvo[0]&&t[t.length-1]===alvo[alvo.length-1])hits.push({p:p,lbl:r[1]});});});
+ const d=$("#drawer");d.onpaste=null;
+ let h='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Prestador · obras ativas</div><h3>'+esc(nome)+'</h3>';
+ if(!hits.length){h+='<div class="empty">Nenhuma obra ativa com este prestador no momento.</div>';}
+ else{
+  const byRole={};hits.forEach(x=>{(byRole[x.lbl]=byRole[x.lbl]||[]).push(x.p);});
+  h+='<div class="util" style="font-size:12px;color:var(--muted);margin:2px 0 10px">'+hits.length+' etapa(s) ativa(s) — clique num livro pra abrir o painel dele.</div>';
+  roles.forEach(r=>{const arr=byRole[r[1]];if(!arr||!arr.length)return;
+   h+='<div class="selogroup" style="margin-top:10px"><div class="selohead" style="background:#3A3340"><span class="sn">'+esc(r[1])+'</span><span class="cnt">'+arr.length+'</span></div>'
+    +arr.map(p=>'<div data-open="'+p.id+'" style="cursor:pointer;padding:9px 11px;border-top:1px solid var(--line)"><div style="font-family:var(--serif);font-size:15px">'+esc(p.original||p.titulo)+'</div><div class="util" style="font-size:12px;color:var(--muted)">'+esc(p.selo)+' · '+esc(p.titulo)+' · etapa atual: '+esc(STAGE_LABELS[p.cur]||p.cur||'—')+'</div></div>').join('')+'</div>';});
+ }
+ h+='<div class="dact"><button class="btn" id="pp-close" style="flex:1">Fechar</button></div>';
+ d.innerHTML=h;d.classList.add("on");$("#scrim").classList.add("on");$("#dx").onclick=$("#pp-close").onclick=closeEditor;
+}
 function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const pe=prioEff(p);const manual=p.prioridade||0;
  const autoLbl=pe>manual?(pe===4?'ALTÍSSIMA · prazo estourado':(alta3m(p)?'ALTA · +3m':'ALTA · prazo perto')):'';
  const prio=(manual>0?'<span class="prio p'+manual+'">'+PRIOLB[manual]+'</span>':'')+(autoLbl?'<span class="prio p'+pe+'" title="prioridade automática pelo prazo">'+autoLbl+'</span>':'');
- const estudio=p.resp_estudio?'<span class="dp" style="font-size:9px;padding:1px 6px" title="estúdio com a obra">🎨 '+esc(p.resp_estudio)+'</span>':'';
+ const estudio=p.resp_estudio?'<span class="dp" data-prestpop="'+esc(p.resp_estudio)+'" style="font-size:9px;padding:1px 6px;cursor:pointer" title="ver todas as obras ativas deste estúdio">🎨 '+esc(p.resp_estudio)+'</span>':'';
  const nped=funcoes.filter(f=>f.obra_id===p.id&&f.status!=='feito').length;
  const pend=nped?'<span class="dp" style="font-size:9px;padding:1px 6px;background:#8a6d1a;color:#fff;border:none" title="pendências abertas — abra a obra ou veja em Funções">📌 '+nped+' pendência'+(nped>1?'s':'')+'</span>':'';
  const projd=p.data_inicio?'<span class="dp" style="font-size:9px;padding:1px 6px" title="início → prazo do projeto (3 meses)">📅 '+dBR(p.data_inicio)+(prazoProj(p)?' → '+dBR(prazoProj(p).toISOString().slice(0,10)):'')+'</span>':'';
@@ -323,7 +344,7 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  +'<div class="rt">'+esc(p.original||p.titulo)+'<span class="pill">'+esc(p.status||"")+'</span>'+prio+dir+prazoBadge(p)+'</div>'
  +'<div class="ra">'+((p.original&&p.titulo)?esc(p.titulo)+' · ':"")+esc(p.autores||"")+((p.colecao&&p.colecao!=="Não")?' · <span class="dp" style="font-size:9px;padding:1px 6px">coleção</span>':"")+'</div>'+blo
  +'<div class="rfoot"><span class="dp '+esc(p.dono)+'">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span>editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
- +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-vercapa="'+p.id+'">🖼 Ver capa</button><button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'</div>'
+ +'<div class="rfoot" style="margin-top:5px;align-items:center"><span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;height:46px;width:32px;border-radius:4px;border:1px solid var(--line);background:#f4f2ee;flex:none;'+(p.capa_img?'':'font-size:8px;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="height:100%;width:100%;object-fit:cover">':'capa')+'</span><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'</div>'
  +'</div><div>'+trilha(p)+inl+'</div></div>';}
 
 function prodListHTML(){
@@ -1160,13 +1181,16 @@ async function sbW(q){try{const r=await q;if(r&&r.error){console.error("[painel]
  catch(e){console.error("[painel] excecao de escrita:",e);toast(sbErrMsg(e),"err");return false}}
 function renderNotif(){const undone=funcoes.filter(f=>f.status!=="feito").length;const bc=$("#bellcount");if(bc){bc.textContent=undone||"";bc.style.display=undone?"inline-flex":"none";}
  const el=$("#notiflist");if(!el)return;
- el.innerHTML=funcoes.length?funcoes.map(f=>{const ob=obraDe(f.obra_id);
+ const eu=meNome();
+ const bar='<div class="controls" style="margin:0 0 10px"><button class="chip" aria-pressed="'+(!npMine)+'" data-npmine="0">Todas</button><button class="chip" aria-pressed="'+npMine+'" data-npmine="1">Só as minhas</button></div>';
+ const lista=funcoes.filter(f=>!npMine||f.atribuido_a===eu);
+ el.innerHTML=bar+(lista.length?lista.map(f=>{const ob=obraDe(f.obra_id);
    const badges=(ob?'<span class="dp" style="font-size:9px;padding:1px 6px;background:'+cfg(ob.selo).c+';color:#fff;border:none">📖 '+esc(ob.titulo)+'</span>':'')+(f.etapa?' <span class="dp" style="font-size:9px;padding:1px 6px">'+esc(STAGE_LABELS[f.etapa]||f.etapa)+'</span>':'');
    const meta=[f.atribuido_a?'para '+esc(f.atribuido_a):'',f.prazo?'prazo '+esc(dBR(f.prazo)):''].filter(Boolean).join(' · ');
    const disc=f.discord_url?'<a href="'+esc(f.discord_url)+'" target="_blank" rel="noopener" title="Abrir no Discord" style="text-decoration:none;background:#5865F2;color:#fff;border-radius:7px;padding:3px 9px;font-size:12px;line-height:1;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:var(--util)">💬 Discord</a>':'';
    const abrir=ob?'<button data-openobra="'+f.obra_id+'" title="Abrir a obra na Produção" style="cursor:pointer;border:0;background:#5A0F22;color:#fff;border-radius:7px;padding:4px 9px;font-size:12px;line-height:1;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-family:var(--util)">📖 Abrir obra</button>':'';
-   return '<div class="ntcard '+(f.status==="feito"?"done":"")+'" style="align-items:flex-start"><input type="checkbox" data-func="'+f.id+'" '+(f.status==="feito"?"checked":"")+' style="margin-top:3px"><span class="nttx" style="'+(f.status==="feito"?"text-decoration:line-through;opacity:.5":"")+'"><span style="display:block;font-weight:600">'+esc(f.titulo_demanda||"")+'</span>'+(badges?'<span style="display:block;margin:3px 0">'+badges+'</span>':'')+(meta?'<span style="display:block;opacity:.6;font-size:11px">'+meta+'</span>':'')+'</span><span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end">'+abrir+disc+'<button class="ntdel" data-editfunc="'+f.id+'" title="Editar">✎</button><button class="ntdel" data-delfunc="'+f.id+'" title="Excluir">✕</button></span></div>';}).join(""):'<div class="empty" style="padding:16px 4px">Sem demandas. Use o formulário acima.</div>';}
-let npEdit=null;
+   return '<div class="ntcard '+(f.status==="feito"?"done":"")+'" style="align-items:flex-start"><input type="checkbox" data-func="'+f.id+'" '+(f.status==="feito"?"checked":"")+' style="margin-top:3px"><span class="nttx" style="'+(f.status==="feito"?"text-decoration:line-through;opacity:.5":"")+'"><span style="display:block;font-weight:600">'+esc(f.titulo_demanda||"")+'</span>'+(badges?'<span style="display:block;margin:3px 0">'+badges+'</span>':'')+(meta?'<span style="display:block;opacity:.6;font-size:11px">'+meta+'</span>':'')+'</span><span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end">'+abrir+disc+'<button class="ntdel" data-editfunc="'+f.id+'" title="Editar">✎</button><button class="ntdel" data-delfunc="'+f.id+'" title="Excluir">✕</button></span></div>';}).join(""):'<div class="empty" style="padding:16px 4px">'+(npMine?'Nenhuma demanda atribuída a você.':'Sem demandas. Use o formulário acima.')+'</div>');}
+let npEdit=null,npMine=false;
 function notifPref(){try{return localStorage.getItem("notifPref")||"todas";}catch(e){return "todas";}}
 function setNotifPref(v){try{localStorage.setItem("notifPref",v);}catch(e){}}
 function buildNotifPanel(){
@@ -1282,6 +1306,8 @@ document.body.addEventListener("click",e=>{
  const gd=e.target.closest("[data-gerardt]");if(gd){gerarDT(gd.dataset.gerardt);return;}
  const ctb=e.target.closest("[data-contrato]");if(ctb){openContrato(ctb.dataset.contrato);return;}
  const vc=e.target.closest("[data-vercapa]");if(vc){openCapa(vc.dataset.vercapa);return;}
+ const ppx=e.target.closest("[data-prestpop]");if(ppx){openPrestadorPop(ppx.dataset.prestpop);return;}
+ const nm=e.target.closest("[data-npmine]");if(nm){npMine=nm.dataset.npmine==="1";renderNotif();return;}
  const fvw=e.target.closest("[data-funcview]");if(fvw){funcView=fvw.dataset.funcview;$("#view").innerHTML=viewFuncoes();return;}
  const cnav=e.target.closest("[data-calnav]");if(cnav){calRef+=parseInt(cnav.dataset.calnav,10);$("#view").innerHTML=viewFuncoes();return;}
  const cwho=e.target.closest("[data-calwho]");if(cwho){calWho=cwho.dataset.calwho;$("#view").innerHTML=viewFuncoes();return;}
