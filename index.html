@@ -425,6 +425,7 @@ function viewCapas(){
       +'<div class="cd">Negociação: <b>'+esc(p.capa_status||"—")+'</b></div>'
       +'<div class="cd">Situação: <b>'+esc(situ)+'</b></div>'
       +'<div class="cd">Aprovações: <b>'+ap+'/2</b></div>'
+      +(p.capa_envio_aprovacao?'<div class="cd">Enviado à agência: <b>'+esc(dBR(p.capa_envio_aprovacao))+'</b></div>':'')
       +'<div class="cd" style="margin-top:6px;color:var(--gc)">✎ editar · subir imagem</div></div></div>';}).join("")+'</div>';}
    return bloco+'</div>';}).join("");
  return h;
@@ -1082,6 +1083,7 @@ function openCapa(id){
   +'<div class="grid2"><div><label class="f">Status DA (direitos)</label><select id="cap-da" style="width:100%">'+CAPA_DA.map(o=>'<option '+(p.capa_da===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Shutterstock</label><select id="cap-sh" style="width:100%">'+SHUTTER.map(o=>'<option '+(p.capa_shutter===o?"selected":"")+'>'+o+'</option>').join("")+'</select></div></div>'
   +'<label class="f">Agente / contato</label><input type="text" id="cap-ag" value="'+esc(p.capa_agente||"")+'" style="width:100%">'
+  +'<label class="f">Enviado p/ aprovação (agência) em</label><input type="date" id="cap-envio" value="'+esc(p.capa_envio_aprovacao||"")+'" style="width:100%"><div class="util" style="font-size:11px;color:var(--muted);margin-top:2px">Data em que a capa foi enviada pra agência/editora aprovar (ex.: capas internacionais adquiridas — tipo "enviada aprovação RIFF").</div>'
   +'<label class="f">Tipo de capa</label><select id="cap-tipo" style="width:100%">'+TIPO_CAPA.map(o=>'<option '+(p.tipo_capa===o?"selected":"")+'>'+o+'</option>').join("")+'</select>'
   +((!capaUsaAprovacao(p))?'<div class="util" style="font-size:11px;color:var(--muted);margin-top:12px">'+(ehFiccao(p.selo)?'Capa de ficção in-house — não passa por aprovação.':'Capa comprada/adquirida — sem etapas de aprovação.')+' (Frente e Capa aberta valem só para capa original de Alaúde.)</div>':'<label class="f">Aprovações da capa</label>'+GATES.map(g=>{const cur=((p.capa_aprovacoes||{})[g[0]])||"pendente";return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="util" style="font-size:11px;flex:1;color:var(--muted)">'+g[1]+'</span><select class="mini" data-gate="'+g[0]+'">'+GATE_ST.map(s=>'<option '+(cur===s?"selected":"")+'>'+s+'</option>').join("")+'</select></div>';}).join(""))
   +'<label class="f">Observações</label><textarea id="cap-obs" style="width:100%;min-height:70px">'+esc(p.capa_obs||"")+'</textarea>'
@@ -1139,7 +1141,7 @@ function openCapa(id){
  $("#cap-emailnac").onclick=()=>{const t=$("#cap-emailout");t.value=emailNegCapaNac(p);t.style.display="block";$("#cap-emailact").style.display="flex";toast("E-mail nacional gerado. Copie e anexe a capa.");};
  $("#cap-emailcopy").onclick=()=>{copiarTexto($("#cap-emailout").value,"E-mail copiado.");};
  $("#dx").onclick=$("#cap-cancel").onclick=closeEditor;
- $("#cap-save").onclick=async()=>{const aprov={};d.querySelectorAll("[data-gate]").forEach(s=>aprov[s.dataset.gate]=s.value);const patch={capa_status:$("#cap-st").value,capa_situacao:$("#cap-sit").value,capa_da:$("#cap-da").value,capa_shutter:$("#cap-sh").value,capa_agente:$("#cap-ag").value.trim(),tipo_capa:$("#cap-tipo").value,capa_aprovacoes:aprov,capa_obs:$("#cap-obs").value.trim()};if(newimg)patch.capa_img=newimg;await patchProd(p.id,patch);render();openCapa(p.id);toast("salvo");};
+ $("#cap-save").onclick=async()=>{const aprov={};d.querySelectorAll("[data-gate]").forEach(s=>aprov[s.dataset.gate]=s.value);const patch={capa_status:$("#cap-st").value,capa_situacao:$("#cap-sit").value,capa_da:$("#cap-da").value,capa_shutter:$("#cap-sh").value,capa_agente:$("#cap-ag").value.trim(),tipo_capa:$("#cap-tipo").value,capa_aprovacoes:aprov,capa_obs:$("#cap-obs").value.trim()};if(newimg)patch.capa_img=newimg;if(temCol('capa_envio_aprovacao'))patch.capa_envio_aprovacao=$("#cap-envio").value||null;await patchProd(p.id,patch);render();openCapa(p.id);toast("salvo");};
 }
 function emailNegCapa(p){
  const nome=((meNome()||'Isabella').split(' ')[0]);const tit=p.original||p.titulo||'';
