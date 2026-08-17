@@ -387,7 +387,7 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  +'<div class="ra">'+((p.original&&p.titulo)?esc(p.titulo)+' · ':"")+esc(p.autores||"")+((p.colecao&&p.colecao!=="Não")?' · <span class="dp" style="font-size:9px;padding:1px 6px">coleção</span>':"")+'</div>'+blo
  +'<div style="margin:13px 0">'+trilha(p)+inl+'</div>'
  +'<div class="rfoot" style="font-size:12px;gap:8px;margin-top:'+(prodCols===2?'auto':'10px')+(prodCols===2?';padding-top:10px':'')+'"><span class="dp '+esc(p.dono)+'" style="font-size:12px;padding:4px 11px">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
- +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'</div>'
+ +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'<button class="lnkbtn" data-relprod="'+p.id+'">📄 Relatório</button>'+'</div>'
  +'<div class="obshov" onclick="event.stopPropagation()"><span class="obsic" title="Observações da obra">📝</span><textarea class="obsedit" data-obsid="'+p.id+'" placeholder="Observações — passe o mouse para editar…">'+esc(p.obs||'')+'</textarea></div>'
  +'</div></div>';}
 
@@ -415,8 +415,8 @@ function viewProd(){
 function viewCoord(){
  const ativos=prod;
  const semDono=ativos.filter(p=>!p.dono).length, luana=ativos.filter(p=>p.dono==="Luana").length, isa=ativos.filter(p=>p.dono==="Isabella").length;
- let h='<div class="kpis">'+[[ativos.length,"Em produção"],[isa,"Com Isabella"],[luana,"Com Luana"],[semDono,"Sem dono"],[estoque.length,"Em estoque"]].map(k=>'<div class="kpi"><div class="n">'+k[0]+'</div><div class="l">'+k[1]+'</div></div>').join("")+'</div>';
- h+='<div style="overflow-x:auto"><table><thead><tr><th>Título</th><th>Selo</th><th>Status</th><th>Dono</th><th>Prioridade</th><th>Prazo</th></tr></thead><tbody>';
+ let h='<div class="kpis">'+[[ativos.length,"Em produção"],[isa,"Com Isabella"],[luana,"Com Luana"],[semDono,"Sem produtor"],[estoque.length,"Em estoque"]].map(k=>'<div class="kpi"><div class="n">'+k[0]+'</div><div class="l">'+k[1]+'</div></div>').join("")+'</div>';
+ h+='<div style="overflow-x:auto"><table><thead><tr><th>Título</th><th>Selo</th><th>Status</th><th>Produtor da obra</th><th>Prioridade</th><th>Prazo</th></tr></thead><tbody>';
  const ord=[...ativos].sort((a,b)=>(b.prioridade||0)-(a.prioridade||0));
  h+=ord.map(p=>'<tr><td class="tt" data-open="'+p.id+'" style="cursor:pointer">'+esc(p.titulo)+'</td><td class="util" style="font-size:11px;color:var(--muted)">'+esc(p.selo)+'</td><td class="util" style="font-size:12px">'+esc(p.status||"")+'</td>'
   +'<td><select class="mini" data-co="dono" data-id="'+p.id+'"><option value="">—</option>'+DONOS.map(d=>'<option '+(p.dono===d?"selected":"")+'>'+d+'</option>').join("")+'</select></td>'
@@ -644,7 +644,7 @@ function viewCad(){
   +'<div class="grid2"><div><label class="f">ISBN original</label><input type="text" id="c-isbno" style="width:100%"></div><div><label class="f">ISBN físico</label><input type="text" id="c-isbnf" style="width:100%"></div></div><label class="f">ISBN digital</label><input type="text" id="c-isbnd" style="width:100%">'
   +'<label class="f">Páginas (miolo)</label><input type="number" id="c-pag" placeholder="opcional — usado no cálculo do contrato" style="width:100%">'
   +'<div class="grid2"><div><label class="f">Selo</label><select id="c-selo" style="width:100%">'+SELOS.map(s=>'<option>'+s+'</option>').join("")+'</select></div>'
-  +'<div><label class="f">Dono</label><select id="c-dono" style="width:100%">'+DONOS.map(d=>'<option '+(d===meNome()?"selected":"")+'>'+d+'</option>').join("")+'</select></div></div>'
+  +'<div><label class="f">Produtor da obra</label><select id="c-dono" style="width:100%">'+DONOS.map(d=>'<option '+(d===meNome()?"selected":"")+'>'+d+'</option>').join("")+'</select></div></div>'
   +'<div class="grid2"><div><label class="f">Status</label><select id="c-st" style="width:100%">'+STATUS_OPTS.map(s=>'<option>'+s+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Etapa atual</label><select id="c-cur" style="width:100%"></select></div></div>'
   +'<label class="f">Observações</label><textarea id="c-obs" style="width:100%;min-height:70px"></textarea>'
@@ -663,7 +663,7 @@ function openCadastro(){const d=$("#drawer");d.onpaste=null;
   +'<div class="grid2"><div><label class="f">ISBN original</label><input type="text" id="c-isbno" style="width:100%"></div><div><label class="f">ISBN físico</label><input type="text" id="c-isbnf" style="width:100%"></div></div><label class="f">ISBN digital</label><input type="text" id="c-isbnd" style="width:100%">'
   +'<label class="f">Páginas (miolo)</label><input type="number" id="c-pag" placeholder="opcional — usado no cálculo do contrato" style="width:100%">'
   +'<div class="grid2"><div><label class="f">Selo</label><select id="c-selo" style="width:100%">'+SELOS.map(s=>'<option>'+s+'</option>').join("")+'</select></div>'
-  +'<div><label class="f">Dono</label><select id="c-dono" style="width:100%">'+DONOS.map(dn=>'<option '+(dn===meNome()?"selected":"")+'>'+dn+'</option>').join("")+'</select></div></div>'
+  +'<div><label class="f">Produtor da obra</label><select id="c-dono" style="width:100%">'+DONOS.map(dn=>'<option '+(dn===meNome()?"selected":"")+'>'+dn+'</option>').join("")+'</select></div></div>'
   +'<div class="grid2"><div><label class="f">Status</label><select id="c-st" style="width:100%">'+STATUS_OPTS.map(s=>'<option>'+s+'</option>').join("")+'</select></div>'
   +'<div><label class="f">Etapa atual</label><select id="c-cur" style="width:100%"></select></div></div>'
   +'<label class="f">Observações</label><textarea id="c-obs" style="width:100%;min-height:70px"></textarea>'
@@ -767,7 +767,7 @@ function viewPagamentos(){
  let h='<div class="kpis"><div class="kpi"><div class="n">'+rows.length+'</div><div class="l">Obras com pagamento pendente</div></div></div>';
  h+='<div style="margin:0 2px 10px"><button class="btn" id="expPag" title="Baixar pendências em CSV/Excel">⬇ Exportar pagamentos</button></div>';
  if(!rows.length)return h+'<div class="empty">Nada pendente. Marque o status de cada etapa em "Contrato & pagamento" no editor de cada obra.</div>';
- h+='<div style="overflow-x:auto"><table><thead><tr><th>Título</th><th>Selo</th><th>Etapas pendentes</th><th>Dono</th></tr></thead><tbody>';
+ h+='<div style="overflow-x:auto"><table><thead><tr><th>Título</th><th>Selo</th><th>Etapas pendentes</th><th>Produtor da obra</th></tr></thead><tbody>';
  h+=rows.map(r=>'<tr data-open="'+r.p.id+'" style="cursor:pointer"><td>'+esc(r.p.titulo)+'</td><td class="util" style="font-size:11px">'+esc(r.p.selo)+'</td><td class="util" style="font-size:12px">'+r.pend.map(k=>esc((STAGE_LABELS[k]||k)+': '+((r.p.pagamentos||{})[k]))).join(" · ")+'</td><td class="util" style="font-size:11px">'+esc(r.p.dono||"")+'</td></tr>').join("");
  return h+'</tbody></table></div>';
 }
@@ -994,6 +994,41 @@ function gerarDT(id){
   +'</body></html>';
  const blob=new Blob(['﻿'+html],{type:'application/msword'});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=(p.original||p.titulo||"obra").replace(/[^\w\s-]/g,"").trim().slice(0,50)+" - Dados Tecnicos.doc";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast();
 }
+function baixarDoc(html,nomeArq){const blob=new Blob(['﻿'+html],{type:'application/msword'});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=nomeArq;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function gerarRelatorioProd(id){
+ const p=prod.find(x=>x.id===id);if(!p)return;
+ const R=(a,b)=>'<tr><td style="border:1px solid #bbb;padding:5px;background:#f5f2ee;font-weight:bold;width:34%">'+a+'</td><td style="border:1px solid #bbb;padding:5px">'+esc((b==null||b==='')?'—':String(b))+'</td></tr>';
+ const SEC=(t)=>'<tr><td colspan="2" style="background:#5A0F22;color:#fff;font-weight:bold;padding:6px 8px;font-size:12px;letter-spacing:.04em">'+t+'</td></tr>';
+ const st=cfg(p.selo).stages;
+ const col=(p.colecao&&p.colecao!=="Não"&&p.colecao!=="Sim")?p.colecao:"—";
+ const dtc=p.dados_tecnicos||{};const capaT=dtc.capa||{},mioT=dtc.miolo||{};
+ const pgC=(capaT.papel||'')+(capaT.gramatura?' '+capaT.gramatura:'');const pgM=(mioT.papel||'')+(mioT.gramatura?' '+mioT.gramatura:'');
+ const etapasRows=st.map(k=>{const pg=(p.pagamentos||{})[k]||'—';const pz=(p.prazos||{})[k];const pzt=pz&&pz.inicio?('início '+dBR(pz.inicio)+(pz.dias?' (+'+pz.dias+'d)':'')):'';return R((STAGE_LABELS[k]||k)+(k===p.cur?' (atual)':''),pzt?(pg+' · '+pzt):pg);}).join('');
+ const aprovRows=(typeof capaUsaAprovacao==="function"&&capaUsaAprovacao(p)&&typeof GATES!=="undefined")?GATES.map(g=>R(g[1],((p.capa_aprovacoes||{})[g[0]])||'pendente')).join(''):'';
+ const pend=(funcoes||[]).filter(f=>f.obra_id===p.id&&f.status!=='feito');
+ const pendHtml=pend.length?('<ul style="margin:6px 0 12px 18px">'+pend.map(f=>'<li>'+esc(f.titulo_demanda||'')+(f.etapa?' — <i>'+esc(STAGE_LABELS[f.etapa]||f.etapa)+'</i>':'')+(f.prazo?' — prazo '+esc(dBR(f.prazo)):'')+(f.atribuido_a?' ('+esc(f.atribuido_a)+')':'')+'</li>').join('')+'</ul>'):'<p style="margin:6px 0 12px;color:#666">Nenhuma pendência aberta.</p>';
+ const prioLbl=(typeof PRIOLB!=="undefined"&&PRIOLB[p.prioridade||0])?PRIOLB[p.prioridade||0]:(p.prioridade||'—');
+ const capaBlock=p.capa_img?('<div style="text-align:center;margin:6px 0 14px"><img src="'+p.capa_img+'" style="width:5.5cm"/><div style="font-size:11px;color:#555;margin-top:4px">Capa — '+esc(capaStatusLabel(p))+'</div></div>'):'<p style="color:#888;text-align:center">(sem imagem de capa)</p>';
+ let quando='';try{quando=new Date().toLocaleString('pt-BR');}catch(e){}
+ const html='<html><head><meta charset="utf-8"></head><body style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#111">'
+  +'<div style="text-align:center;border-bottom:2px solid #5A0F22;padding-bottom:8px;margin-bottom:12px"><div style="font-size:11px;letter-spacing:.12em;color:#5A0F22">RELATÓRIO DE PRODUÇÃO</div><h1 style="margin:6px 0 2px;font-size:20px">'+esc(p.original||p.titulo||'Obra')+'</h1><div style="font-size:12px;color:#555">'+esc(p.selo||'')+(p.titulo&&p.original?' · '+esc(p.titulo):'')+'</div></div>'
+  +capaBlock
+  +'<table style="border-collapse:collapse;width:100%;margin-bottom:14px">'
+  +SEC('IDENTIFICAÇÃO')+R('Título original',p.original||p.titulo)+R('Título (BR)',p.titulo)+R('Subtítulo',p.subtitulo)+R('Autor(es)',p.autores)+R('Coleção',col)+R('Selo',p.selo)+R('ISBN original',p.isbn_original)+R('ISBN físico',p.isbn_fisico)+R('ISBN digital',p.isbn_digital)+R('Páginas (miolo)',p.paginas)
+  +SEC('PRODUÇÃO')+R('Status',p.status)+R('Etapa atual',STAGE_LABELS[p.cur]||p.cur)+R('Produtor da obra',p.dono)+R('Prioridade',prioLbl)+R('Início',p.data_inicio?dBR(p.data_inicio):'—')+R('Prazo',p.prazo?dBR(p.prazo):'—')+R('Local',p.local||'produção')+(p.bloqueio_desde?R('Bloqueado desde',dBR(p.bloqueio_desde)):'')+(p.bloqueio?R('Bloqueio',p.bloqueio):'')
+  +SEC('EQUIPE')+R('Estúdio',p.resp_estudio)+(ehFiccao(p.selo)?R('Copidesque',p.resp_copi):'')+R('Revisão',p.resp_revisao)+R('Capista',p.resp_capista)+(p.resp_design?R('Designer',p.resp_design):'')
+  +SEC('ETAPAS')+etapasRows
+  +SEC('CAPA')+R('Status no painel',capaStatusLabel(p))+R('Situação',p.capa_situacao)+R('Status (negociação)',p.capa_status)+R('Tipo de capa',p.tipo_capa)+R('Agente / contato',p.capa_agente)+(p.capa_envio_aprovacao?R('Enviado à agência em',dBR(p.capa_envio_aprovacao)):'')+(p.capa_aprovada_agencia?R('Aprovada pela agência','Sim'):'')+aprovRows
+  +((mioT.papel||mioT.formato||capaT.papel||capaT.formato)?SEC('DADOS TÉCNICOS')+R('Miolo — formato',mioT.formato)+R('Miolo — papel',pgM||'—')+R('Miolo — páginas',mioT.paginacao||p.paginas)+R('Capa — formato',capaT.formato)+R('Capa — papel',pgC||'—')+R('Capa — acabamento',capaT.acabamento)+R('Capa — laminação',capaT.laminacao):'')
+  +SEC('LINKS')+R('Amazon',p.amazon_url)+R('Discord',p.discord_url)+R('Drive',p.drive_url)
+  +'</table>'
+  +'<div style="font-weight:bold;color:#5A0F22;margin:14px 0 4px">PENDÊNCIAS ABERTAS</div>'+pendHtml
+  +'<div style="font-weight:bold;color:#5A0F22;margin:8px 0 4px">OBSERVAÇÕES</div><p style="white-space:pre-wrap;margin:4px 0 12px">'+esc(p.obs||'—')+'</p>'
+  +'<div style="border-top:1px solid #ccc;margin-top:16px;padding-top:6px;font-size:10px;color:#888">Gerado pelo Painel de Produção · Alta Books'+(quando?' · '+esc(quando):'')+(typeof meNome==="function"?' · por '+esc(meNome()):'')+'</div>'
+  +'</body></html>';
+ baixarDoc(html,(p.original||p.titulo||"obra").replace(/[^\w\s-]/g,"").trim().slice(0,50)+" - Relatorio de Producao.doc");
+ toast("Relatório gerado — abre no Word/Google Docs.");
+}
 function viewFichas(){
  const rows=prod.filter(p=>emProducao(p)||(p.local||'')==='grafica'||p.status==='P&G').slice().sort((a,b)=>(a.selo||'').localeCompare(b.selo||'')||(a.titulo||'').localeCompare(b.titulo||''));
  let h='<div class="util" style="font-size:12px;color:var(--muted);margin:14px 2px 10px">Ficha técnica de cada obra em produção — capa, miolo e marcador. Clique em <b>Editar</b> pra preencher, ou <b>Gerar</b> pra baixar o .doc.</div>';
@@ -1129,7 +1164,7 @@ function openEditor(id){
   +'<label class="f">Páginas (miolo)</label><input type="number" id="e-pag" value="'+(p.paginas||"")+'" placeholder="nº de páginas do miolo — usado no cálculo do contrato" style="width:100%">'
   +'<label class="f">Data de início do projeto</label><input type="date" id="e-ini" value="'+(p.data_inicio||"")+'" style="width:100%"><div class="util" style="font-size:11px;color:var(--muted);margin:3px 0 2px">Prazo do projeto: 3 meses. Passou disso ainda em produção, vira Alta automaticamente.</div>'
   +'<div class="grid2"><div><label class="f">Status</label><select id="e-st" style="width:100%">'+STATUS_OPTS.map(s=>'<option '+(p.status===s?"selected":"")+'>'+s+'</option>').join("")+'</select></div>'
-  +'<div><label class="f">Dono</label><select id="e-dono" style="width:100%"><option value="">—</option>'+DONOS.map(x=>'<option '+(p.dono===x?"selected":"")+'>'+x+'</option>').join("")+'</select></div></div>'
+  +'<div><label class="f">Produtor da obra</label><select id="e-dono" style="width:100%"><option value="">—</option>'+DONOS.map(x=>'<option '+(p.dono===x?"selected":"")+'>'+x+'</option>').join("")+'</select></div></div>'
   +'<label class="f">Etapas concluídas ('+p.selo+')</label><div class="stopsedit" id="e-done">'+st.map(k=>'<label><input type="checkbox" value="'+k+'" '+((p.done||[]).includes(k)?"checked":"")+'>'+(STAGE_LABELS[k]||k)+'</label>').join("")+'</div>'
   +'<label class="f">Etapa atual</label><select id="e-cur" style="width:100%"><option value="">—</option>'+st.map(k=>'<option value="'+k+'" '+(p.cur===k?"selected":"")+'>'+(STAGE_LABELS[k]||k)+'</option>').join("")+'</select>'
   +'<label class="f">Frentes ativas (paralelas)</label><div class="stopsedit" id="e-frentes">'+st.map(k=>'<label><input type="checkbox" value="'+k+'" '+((p.frentes||[]).includes(k)?"checked":"")+'>'+(STAGE_LABELS[k]||k)+'</label>').join("")+'</div>'
@@ -1181,6 +1216,7 @@ function openEditor(id){
   +'<div class="grid2"><select id="e-pend-a" style="width:100%">'+PESSOAS.map(x=>'<option '+(x===meNome()?"selected":"")+'>'+x+'</option>').join("")+'</select><input type="date" id="e-pend-p" title="Prazo da pendência (opcional)" style="width:100%"></div>'
   +'<button class="btn" id="e-pend-add" style="width:100%;margin-top:6px">+ Adicionar pendência</button>'
   +'<label class="f">Observações</label><textarea id="e-obs" style="width:100%;min-height:90px">'+esc(p.obs||"")+'</textarea>'
+  +'<div style="margin-top:14px"><button class="btn" data-relprod="'+p.id+'" style="width:100%">📄 Gerar relatório de produção (Word)</button></div>'
   +'<div class="dact"><button class="btn gold" id="e-save" style="flex:1">Salvar</button><button class="btn" id="e-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#e-cancel").onclick=closeEditor;
@@ -1591,6 +1627,7 @@ document.body.addEventListener("click",e=>{
  if(e.target.id==="nt-add"){const t=$("#nt-t").value.trim();if(!t)return;addNotif({texto:t,origem:"manual",feito:false}).then(render);return;}
  const dtb=e.target.closest("[data-dt]");if(dtb){openDT(dtb.dataset.dt);return;}
  const gd=e.target.closest("[data-gerardt]");if(gd){gerarDT(gd.dataset.gerardt);return;}
+ const rp=e.target.closest("[data-relprod]");if(rp){gerarRelatorioProd(rp.dataset.relprod);return;}
  const ctb=e.target.closest("[data-contrato]");if(ctb){openContrato(ctb.dataset.contrato);return;}
  const vc=e.target.closest("[data-vercapa]");if(vc){openCapa(vc.dataset.vercapa);return;}
  const ppx=e.target.closest("[data-prestpop]");if(ppx){openPrestadorPop(ppx.dataset.prestpop);return;}
