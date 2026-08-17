@@ -259,7 +259,7 @@ const SELOS=Object.keys(SELOCFG);
 const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
-let prod=[],estoque=[],reimp=[],tab="prod",filt={sel:"all",q:"",mine:true,prio:false,venc:false},collapsed={},prodLoadOk=false;
+let prod=[],estoque=[],reimp=[],arquivadas=[],tab="prod",filt={sel:"all",q:"",mine:true,prio:false,venc:false},collapsed={},prodLoadOk=false;
 let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=2;
 function sortFuncs(a,b){
  if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
@@ -290,10 +290,39 @@ async function addProd(o){o.updated_by=meNome();
   if(r.data&&r.data.length)prod.unshift(r.data[0]);else await loadLive();
  } else {o.id=uid();prod.unshift(o);demoSave();}
  toast("Obra cadastrada.");return true;}
+/* ===== Arquivar obra (soft-delete) com código OTP no e-mail do login ===== */
+async function enviarCodigoExclusao(){
+ if(MODE!=="live"||!sb||!user||!user.email){toast("Precisa estar logada pra excluir.","err");return false;}
+ const {error}=await sb.auth.signInWithOtp({email:user.email,options:{shouldCreateUser:false}});
+ if(error){toast("Não consegui enviar o código: "+error.message,"err");return false;}
+ toast("Código enviado para "+user.email);return true;
+}
+async function verificarCodigoExclusao(code){
+ if(!code||!code.trim())return false;
+ const {error}=await sb.auth.verifyOtp({email:user.email,token:code.trim(),type:'email'});
+ if(error){toast("Código inválido ou expirado.","err");return false;}
+ return true;
+}
+async function arquivarObra(id){
+ const p=prod.find(x=>x.id===id);if(!p)return false;
+ if(MODE==="live"){const upd={arquivada:true};if(temCol("arquivada_em"))upd.arquivada_em=new Date().toISOString();if(!await sbW(sb.from("producao").update(upd).eq("id",id)))return false;}
+ p.arquivada=true;prod=prod.filter(x=>x.id!==id);arquivadas.unshift(p);return true;
+}
+async function restaurarObra(id){
+ const p=arquivadas.find(x=>x.id===id);if(!p)return false;
+ if(MODE==="live"){const upd={arquivada:false};if(temCol("arquivada_em"))upd.arquivada_em=null;if(!await sbW(sb.from("producao").update(upd).eq("id",id)))return false;}
+ p.arquivada=false;arquivadas=arquivadas.filter(x=>x.id!==id);prod.unshift(p);return true;
+}
+function abrirArquivadas(){const d=$("#drawer");d.onpaste=null;
+ d.innerHTML='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Arquivadas</div><h3>Obras arquivadas</h3>'
+  +'<div class="util" style="font-size:11px;color:var(--muted);margin-bottom:10px">'+arquivadas.length+' obra(s) arquivada(s). Restaurar traz de volta pro painel.</div>'
+  +(arquivadas.length?arquivadas.slice().sort((a,b)=>(a.original||a.titulo||'').localeCompare(b.original||b.titulo||'')).map(p=>'<div class="row" style="cursor:default;align-items:center"><div style="flex:1"><div class="rt" style="font-size:14px">'+esc(p.original||p.titulo)+'</div><div class="ra">'+esc(p.selo||'')+(p.titulo&&p.original?' · '+esc(p.titulo):'')+(p.arquivada_em?' · arquivada em '+dBR(String(p.arquivada_em).slice(0,10)):'')+'</div></div><button class="btn gold" data-restaura="'+p.id+'" style="padding:4px 12px">↩ Restaurar</button></div>').join(''):'<div class="empty">Nenhuma obra arquivada.</div>')
+  +'<div class="dact"><button class="btn" id="e-cancel">Fechar</button></div>';
+ d.classList.add("on");$("#scrim").classList.add("on");$("#dx").onclick=$("#e-cancel").onclick=closeEditor;}
 async function loadLive(){
  let a;for(let i=0;i<4;i++){a=await sb.from("producao").select("*");if(!a.error)break;await new Promise(r=>setTimeout(r,500*(i+1)));}
  if(a.error){prodLoadOk=false;console.error("[painel] loadLive producao:",a.error);toast("Nao consegui carregar as obras do servidor. O que esta na tela pode estar desatualizado.","err")}
- else {prodLoadOk=true;prod=a.data||[];}
+ else {prodLoadOk=true;const todas=a.data||[];arquivadas=todas.filter(x=>x.arquivada===true);prod=todas.filter(x=>x.arquivada!==true);}
  let b;for(let i=0;i<4;i++){b=await sb.from("estoque").select("*");if(!b.error)break;await new Promise(r=>setTimeout(r,500*(i+1)));}
  if(b.error)console.error("[painel] loadLive estoque:",b.error);else estoque=b.data||[];
  let c;for(let i=0;i<4;i++){c=await sb.from("reimpressoes").select("*");if(!c.error)break;await new Promise(r=>setTimeout(r,500*(i+1)));}
@@ -415,6 +444,7 @@ function viewProd(){
   +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="2 livros por linha">▥ 2 col</button>'
   +'<button class="btn" id="expProd" title="Baixar produção em CSV/Excel (uma linha por obra)">⬇ Exportar</button>'
   +'<button class="btn" id="expEtapas" title="Baixar planilha de obras × etapas (uma linha por etapa)">⬇ Etapas</button>'
+  +(arquivadas.length?'<button class="btn" id="verArquivadas" title="Ver / restaurar obras arquivadas">🗄 Arquivadas ('+arquivadas.length+')</button>':'')
   +'<button class="btn gold" id="addBtn">+ Cadastrar obra</button></div>'+resumo+'<div id="prodlist">'+prodListHTML()+'</div>';
 }
 function viewCoord(){
@@ -1228,12 +1258,19 @@ function openEditor(id){
   +'<button class="btn" id="e-pend-add" style="width:100%;margin-top:6px">+ Adicionar pendência</button>'
   +'<label class="f">Observações</label><textarea id="e-obs" style="width:100%;min-height:90px">'+esc(p.obs||"")+'</textarea>'
   +'<div style="margin-top:14px"><button class="btn" data-relprod="'+p.id+'" style="width:100%">📄 Gerar relatório de produção (Word)</button></div>'
+  +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:8px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#C21F4A">Arquivar obra</span>'
+  +'<div id="e-delzone"><button class="btn" id="e-del" style="color:#C21F4A;border-color:#C21F4A">🗑 Arquivar esta obra</button><div class="util" style="font-size:11px;color:var(--muted);margin-top:4px">Envia um código pro seu e-mail ('+esc(user&&user.email?user.email:"login")+') pra confirmar. A obra sai do painel mas pode ser restaurada em <b>🗄 Arquivadas</b>.</div></div>'
+  +'<div id="e-delcode" style="display:none;margin-top:8px"><input type="text" id="e-delotp" placeholder="Cole o código que chegou no e-mail" style="width:100%" autocomplete="one-time-code"><div class="dact" style="margin-top:6px"><button class="btn" id="e-delconfirm" style="flex:1;color:#fff;background:#C21F4A;border-color:#C21F4A">Confirmar arquivamento</button><button class="btn" id="e-delcancel">Cancelar</button></div></div>'
+  +'</div>'
   +'<div class="dact"><button class="btn gold" id="e-save" style="flex:1">Salvar</button><button class="btn" id="e-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#e-cancel").onclick=closeEditor;
  if($("#e-msgini"))$("#e-msgini").onclick=()=>{const t=$("#e-msgout");t.value=msgInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Mensagem gerada — confira e copie pro canal do Discord.");};
  if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
  if($("#e-msgcopi"))$("#e-msgcopi").onclick=()=>{const t=$("#e-msgout");t.value=msgOfertaCopiRev(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta de Copi/Revisão gerada — confira e copie pro Discord.");};
+ if($("#e-del"))$("#e-del").onclick=async()=>{const b=$("#e-del");b.disabled=true;b.textContent="Enviando código…";const ok=await enviarCodigoExclusao();b.disabled=false;b.textContent="🗑 Arquivar esta obra";if(ok){$("#e-delzone").style.display="none";$("#e-delcode").style.display="block";const o=$("#e-delotp");if(o)o.focus();}};
+ if($("#e-delcancel"))$("#e-delcancel").onclick=()=>{$("#e-delcode").style.display="none";$("#e-delzone").style.display="block";};
+ if($("#e-delconfirm"))$("#e-delconfirm").onclick=async()=>{const o=$("#e-delotp");const code=o?o.value:"";if(!code||!code.trim()){if(o)o.focus();return;}const b=$("#e-delconfirm");b.disabled=true;b.textContent="Verificando…";const ok=await verificarCodigoExclusao(code);if(!ok){b.disabled=false;b.textContent="Confirmar arquivamento";return;}const arq=await arquivarObra(p.id);closeEditor();tab="prod";render();if(arq)toast("Obra arquivada. Pra restaurar, use 🗄 Arquivadas.");};
  if($("#e-msgcopy"))$("#e-msgcopy").onclick=()=>{copiarTexto($("#e-msgout").value,"Mensagem copiada — cole no canal do Discord.");};
  $("#e-save").onclick=async()=>{const done=[...d.querySelectorAll("#e-done input:checked")].map(i=>i.value);
   const fr=[...d.querySelectorAll("#e-frentes input:checked")].map(i=>i.value);const prz=Object.assign({},p.prazos||{});const _ck=$("#e-cur").value;if(_ck)prz[_ck]={inicio:$("#e-pzini").value||"",dias:parseInt($("#e-pzdias").value||20,10)};
@@ -1617,6 +1654,8 @@ document.body.addEventListener("click",e=>{
  const gi=e.target.closest("[data-gs]");if(gi){abrirBuscaResultado(gsLast[+gi.dataset.gs]);return;}
  if(e.target.id==="expProd"){exportarProducao();return;}
  if(e.target.id==="expEtapas"){exportarEtapas();return;}
+ if(e.target.id==="verArquivadas"){abrirArquivadas();return;}
+ const rst=e.target.closest("[data-restaura]");if(rst){restaurarObra(rst.dataset.restaura).then(ok=>{if(ok){render();abrirArquivadas();toast("Obra restaurada.");}});return;}
  if(e.target.id==="expPag"){exportarPagamentos();return;}
  if(e.target.id==="expEst"){exportarEstoque();return;}
  if(e.target.closest("#gohome")){tab="prod";filt.sel="all";filt.venc=false;window.scrollTo({top:0,behavior:"smooth"});render();return;}
