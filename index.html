@@ -297,10 +297,15 @@ async function enviarCodigoExclusao(){
  if(error){toast("Não consegui enviar o código: "+error.message,"err");return false;}
  toast("Código enviado para "+user.email);return true;
 }
-async function verificarCodigoExclusao(code){
- if(!code||!code.trim())return false;
- const {error}=await sb.auth.verifyOtp({email:user.email,token:code.trim(),type:'email'});
- if(error){toast("Código inválido ou expirado.","err");return false;}
+async function verificarCodigoExclusao(input){
+ input=(input||'').trim();if(!input)return false;
+ let token_hash=null,type='email';
+ const mh=input.match(/[?&](?:token_hash|token)=([^&\s]+)/); /* colou o link inteiro do e-mail */
+ if(mh){token_hash=decodeURIComponent(mh[1]);const mt=input.match(/[?&]type=([^&\s]+)/);if(mt)type=decodeURIComponent(mt[1]);}
+ let res;
+ if(token_hash)res=await sb.auth.verifyOtp({token_hash:token_hash,type:type});
+ else res=await sb.auth.verifyOtp({email:user.email,token:input,type:'email'}); /* colou o codigo numerico */
+ if(res.error){toast("Código/link inválido ou expirado.","err");return false;}
  return true;
 }
 async function arquivarObra(id){
@@ -1259,8 +1264,8 @@ function openEditor(id){
   +'<label class="f">Observações</label><textarea id="e-obs" style="width:100%;min-height:90px">'+esc(p.obs||"")+'</textarea>'
   +'<div style="margin-top:14px"><button class="btn" data-relprod="'+p.id+'" style="width:100%">📄 Gerar relatório de produção (Word)</button></div>'
   +'<div style="border-top:1px solid var(--line);margin-top:16px;padding-top:8px"><span class="util" style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#C21F4A">Arquivar obra</span>'
-  +'<div id="e-delzone"><button class="btn" id="e-del" style="color:#C21F4A;border-color:#C21F4A">🗑 Arquivar esta obra</button><div class="util" style="font-size:11px;color:var(--muted);margin-top:4px">Envia um código pro seu e-mail ('+esc(user&&user.email?user.email:"login")+') pra confirmar. A obra sai do painel mas pode ser restaurada em <b>🗄 Arquivadas</b>.</div></div>'
-  +'<div id="e-delcode" style="display:none;margin-top:8px"><input type="text" id="e-delotp" placeholder="Cole o código que chegou no e-mail" style="width:100%" autocomplete="one-time-code"><div class="dact" style="margin-top:6px"><button class="btn" id="e-delconfirm" style="flex:1;color:#fff;background:#C21F4A;border-color:#C21F4A">Confirmar arquivamento</button><button class="btn" id="e-delcancel">Cancelar</button></div></div>'
+  +'<div id="e-delzone"><button class="btn" id="e-del" style="color:#C21F4A;border-color:#C21F4A">🗑 Arquivar esta obra</button><div class="util" style="font-size:11px;color:var(--muted);margin-top:4px">Envia um e-mail de confirmação pra você ('+esc(user&&user.email?user.email:"login")+'). A obra sai do painel mas pode ser restaurada em <b>🗄 Arquivadas</b>.</div></div>'
+  +'<div id="e-delcode" style="display:none;margin-top:8px"><input type="text" id="e-delotp" placeholder="Cole o código OU o link inteiro do e-mail" style="width:100%" autocomplete="one-time-code"><div class="util" style="font-size:11px;color:var(--muted);margin:3px 0 6px">Abra o e-mail que acabou de chegar e cole aqui: o <b>código</b> (se vier número) ou o <b>link inteiro</b> ("Sign in"). Qualquer um dos dois confirma.</div><div class="dact"><button class="btn" id="e-delconfirm" style="flex:1;color:#fff;background:#C21F4A;border-color:#C21F4A">Confirmar arquivamento</button><button class="btn" id="e-delcancel">Cancelar</button></div></div>'
   +'</div>'
   +'<div class="dact"><button class="btn gold" id="e-save" style="flex:1">Salvar</button><button class="btn" id="e-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");
