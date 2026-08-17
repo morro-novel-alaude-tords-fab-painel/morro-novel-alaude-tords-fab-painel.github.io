@@ -282,10 +282,14 @@ async function patchProd(id,patch){patch.updated_by=meNome();const p=prod.find(x
  if(MODE==="live"){if(!await sbW(sb.from("producao").update(patch).eq("id",id))){Object.assign(p,antes);render();return false}}
  else demoSave();
  toast();return true;}
-async function addProd(o){o.id=uid();o.updated_by=meNome();prod.unshift(o);
- if(MODE==="live"){if(!await sbW(sb.from("producao").insert(o))){prod=prod.filter(x=>x.id!==o.id);render();return false}}
- else demoSave();
- toast();return true;}
+async function addProd(o){o.updated_by=meNome();
+ if(MODE==="live"){
+  const ins=Object.assign({},o);delete ins.id; /* deixa o banco gerar o UUID; id do cliente nao e UUID valido */
+  const r=await sb.from("producao").insert(ins).select();
+  if(r.error){toast("Não consegui cadastrar a obra: "+(r.error.message||"erro"),"err");return false;}
+  if(r.data&&r.data.length)prod.unshift(r.data[0]);else await loadLive();
+ } else {o.id=uid();prod.unshift(o);demoSave();}
+ toast("Obra cadastrada.");return true;}
 async function loadLive(){
  let a;for(let i=0;i<4;i++){a=await sb.from("producao").select("*");if(!a.error)break;await new Promise(r=>setTimeout(r,500*(i+1)));}
  if(a.error){prodLoadOk=false;console.error("[painel] loadLive producao:",a.error);toast("Nao consegui carregar as obras do servidor. O que esta na tela pode estar desatualizado.","err")}
@@ -719,10 +723,16 @@ async function checkAutoFuncs(){
   const pr=(p.prazos||{})[cur];if(!pr||!pr.inicio)return;
   const ini=new Date(String(pr.inicio).slice(0,10)+"T00:00:00");if(isNaN(ini))return;
   const dias=parseInt(pr.dias||20,10);const fim=new Date(ini.getTime());fim.setDate(fim.getDate()+dias);
-  AUTO_RULES.forEach(r=>{const b=r.base==="ini"?ini:fim;const alvo=new Date(b.getTime());alvo.setDate(alvo.getDate()+r.off);
-   if(hoje>=alvo){const key=p.id+"|"+cur+"|"+r.id;
-    if(!funcoes.some(f=>f.auto_key===key))novas.push({titulo_demanda:r.txt+" — "+(STAGE_LABELS[cur]||cur),obra_id:p.id,etapa:cur,atribuido_a:(p.dono||meNome()),status:"pendente",auto_key:key,criado_por:"sistema",updated_by:"sistema",prazo:fmtISO(fim)});}
-  });});
+  const meio=new Date(ini.getTime());meio.setDate(meio.getDate()+5);
+  const aviso=new Date(fim.getTime());aviso.setDate(aviso.getDate()-5);
+  /* fases mutuamente exclusivas: entra SÓ a da fase atual, nunca as três juntas */
+  let r=null;
+  if(hoje>=fim) r={id:"fim0",txt:"Prazo da etapa é HOJE (ou estourado)",prazo:fim};
+  else if(aviso>meio&&hoje>=aviso) r={id:"fim5",txt:"Faltam ~5 dias pro fim da etapa",prazo:fim};
+  else if(hoje>=meio) r={id:"ini5",txt:"Acompanhar andamento (5 dias de etapa)",prazo:meio};
+  if(!r)return;
+  const key=p.id+"|"+cur+"|"+r.id;
+  if(!funcoes.some(f=>f.auto_key===key))novas.push({titulo_demanda:r.txt+" — "+(STAGE_LABELS[cur]||cur),obra_id:p.id,etapa:cur,atribuido_a:(p.dono||meNome()),status:"pendente",auto_key:key,criado_por:"sistema",updated_by:"sistema",prazo:fmtISO(r.prazo)});});
  if(!novas.length)return;
  for(const o of novas){try{await sb.from("funcoes").insert(o);}catch(e){}}
  await loadExtra();renderNotif();renderTabs();
