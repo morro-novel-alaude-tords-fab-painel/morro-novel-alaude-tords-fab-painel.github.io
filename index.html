@@ -409,7 +409,8 @@ function viewProd(){
   +'<input type="search" id="q" placeholder="Buscar título, autor" value="'+esc(filt.q)+'">'
   +'<button class="chip" aria-pressed="'+(prodCols===1)+'" data-prodcols="1" title="1 livro por linha">▬ 1 col</button>'
   +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="2 livros por linha">▥ 2 col</button>'
-  +'<button class="btn" id="expProd" title="Baixar produção em CSV/Excel">⬇ Exportar</button>'
+  +'<button class="btn" id="expProd" title="Baixar produção em CSV/Excel (uma linha por obra)">⬇ Exportar</button>'
+  +'<button class="btn" id="expEtapas" title="Baixar planilha de obras × etapas (uma linha por etapa)">⬇ Etapas</button>'
   +'<button class="btn gold" id="addBtn">+ Cadastrar obra</button></div>'+resumo+'<div id="prodlist">'+prodListHTML()+'</div>';
 }
 function viewCoord(){
@@ -1579,9 +1580,12 @@ function abrirBuscaResultado(r){if(!r)return;closeSearch();
 /* ===== Exportar relatórios (CSV, abre no Excel) ===== */
 function csvEsc(v){v=(v==null?'':String(v));return '"'+v.replace(/"/g,'""')+'"';}
 function baixarCSV(nome,linhas){const txt='﻿'+linhas.map(l=>l.map(csvEsc).join(';')).join('\r\n');const blob=new Blob([txt],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Relatório exportado');}
-function exportarProducao(){const cab=['Selo','Título original','Título (BR)','Autores','Coleção','Status','Local','Dono','Etapa atual','Prioridade','Prazo do projeto','Data início','Páginas','Estúdio','Copidesque','Revisão','Capista','ISBN original','ISBN físico','ISBN digital'];const linhas=[cab];
- [...prod].sort((a,b)=>(a.selo||'').localeCompare(b.selo||'')||prioEff(b)-prioEff(a)).forEach(p=>linhas.push([p.selo,p.original,p.titulo,p.autores,p.colecao,p.status,(p.local||'producao'),p.dono,(STAGE_LABELS[p.cur]||p.cur||''),(PRIOLB[prioEff(p)]||''),(p.prazo?dBR(p.prazo):''),(p.data_inicio?dBR(p.data_inicio):''),(p.paginas||''),p.resp_estudio,p.resp_copi,p.resp_revisao,p.resp_capista,p.isbn_original,p.isbn_fisico,p.isbn_digital]));
+function exportarProducao(){const cab=['Selo','Título original','Título (BR)','Autores','Coleção','Status','Local','Produtor da obra','Etapa atual','Prioridade','Prazo do projeto','Data início','Páginas','Estúdio','Copidesque','Revisão','Capista','Status da capa','Agente/Contato','Observações','ISBN original','ISBN físico','ISBN digital'];const linhas=[cab];
+ [...prod].sort((a,b)=>(a.selo||'').localeCompare(b.selo||'')||prioEff(b)-prioEff(a)).forEach(p=>linhas.push([p.selo,p.original,p.titulo,p.autores,p.colecao,p.status,(p.local||'producao'),p.dono,(STAGE_LABELS[p.cur]||p.cur||''),(PRIOLB[prioEff(p)]||''),(p.prazo?dBR(p.prazo):''),(p.data_inicio?dBR(p.data_inicio):''),(p.paginas||''),p.resp_estudio,p.resp_copi,p.resp_revisao,p.resp_capista,capaStatusLabel(p),p.capa_agente,p.obs,p.isbn_original,p.isbn_fisico,p.isbn_digital]));
  baixarCSV('producao.csv',linhas);}
+function exportarEtapas(){const cab=['Selo','Título (BR)','Título original','Produtor da obra','Status da obra','Etapa','É a etapa atual?','Status de pagamento','Início da etapa','Dias previstos'];const linhas=[cab];
+ [...prod].sort((a,b)=>(a.selo||'').localeCompare(b.selo||'')||(a.titulo||'').localeCompare(b.titulo||'')).forEach(p=>{const st=cfg(p.selo).stages;st.forEach(k=>{const pz=(p.prazos||{})[k]||{};linhas.push([p.selo,p.titulo,p.original,p.dono,p.status,(STAGE_LABELS[k]||k),(k===p.cur?'Sim':''),((p.pagamentos||{})[k]||''),(pz.inicio?dBR(pz.inicio):''),(pz.dias||'')]);});});
+ baixarCSV('obras-e-etapas.csv',linhas);}
 function exportarPagamentos(){const cab=['Título','Selo','Etapa','Status pagamento','Dono'];const linhas=[cab];
  prod.forEach(p=>{const pg=p.pagamentos||{};cfg(p.selo).stages.forEach(k=>{if(pg[k]&&pg[k]!=='pago')linhas.push([p.titulo,p.selo,(STAGE_LABELS[k]||k),pg[k],(p.dono||'')]);});});
  if(linhas.length===1){toast('Nada pendente para exportar','err');return;}baixarCSV('pagamentos-pendentes.csv',linhas);}
@@ -1602,6 +1606,7 @@ document.body.addEventListener("click",e=>{
  if(e.target.id==="gsclose"||e.target.id==="gscrim"){closeSearch();return;}
  const gi=e.target.closest("[data-gs]");if(gi){abrirBuscaResultado(gsLast[+gi.dataset.gs]);return;}
  if(e.target.id==="expProd"){exportarProducao();return;}
+ if(e.target.id==="expEtapas"){exportarEtapas();return;}
  if(e.target.id==="expPag"){exportarPagamentos();return;}
  if(e.target.id==="expEst"){exportarEstoque();return;}
  if(e.target.closest("#gohome")){tab="prod";filt.sel="all";filt.venc=false;window.scrollTo({top:0,behavior:"smooth"});render();return;}
