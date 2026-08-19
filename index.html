@@ -97,11 +97,19 @@ input[type=search]{min-width:200px;flex:1 1 200px}
 .obshov{display:flex;gap:6px;align-items:flex-start;margin-top:8px;border-top:1px dashed var(--line);padding-top:7px}
 .obshov .obsic{font-size:12px;line-height:24px;opacity:.55;flex:none}
 .obsedit{flex:1;height:24px;min-height:24px;overflow:hidden;border:1px solid transparent;border-radius:8px;background:transparent;font-family:var(--util);font-size:11px;color:var(--muted);padding:3px 7px;box-sizing:border-box;resize:none;transition:height .15s,background .15s,border-color .15s,color .15s}
-.row:hover .obsedit,.obsedit:focus{height:74px;overflow:auto;border-color:var(--line);background:var(--panel);color:inherit;resize:vertical;outline:none}
+.row:hover .obsedit,.obsedit:focus,.obsedit.pin{height:74px;overflow:auto;border-color:var(--line);background:var(--panel);color:inherit;resize:vertical;outline:none}
+.obspin{flex:none;border:1px solid var(--line);background:transparent;border-radius:8px;cursor:pointer;font-size:12px;line-height:22px;padding:0 6px;opacity:.5}
+.obspin.on{opacity:1;border-color:#C21F4A;background:rgba(194,31,74,.08)}
+.inlinepill,.inlinedp,.inlinecapa{font-family:var(--util);border-radius:20px;border:1px solid var(--line);padding:2px 8px;font-size:11px;cursor:pointer;background:var(--panel);color:inherit;max-width:100%;vertical-align:middle}
+.inlinepill{margin-left:8px;text-transform:uppercase;letter-spacing:.05em;font-size:10px;color:var(--gc);border-color:var(--gc)}
+.inlinedp{font-size:12px;padding:3px 9px}
+.inlinecapa{color:#fff;border:none;font-weight:600;text-align:center;width:100%;box-sizing:border-box;padding:4px 6px;font-size:11px}
 .npanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);width:min(580px,94vw);max-height:86vh;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:55;display:flex;flex-direction:column}
 .npanel.on{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
 .nphead{display:flex;align-items:center;justify-content:space-between;padding:16px 14px;font-family:var(--serif);font-size:18px;border-bottom:1px solid var(--line)}
 .npscrim{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.18s;z-index:54}.npscrim.on{opacity:1;pointer-events:auto}
+.npanel.pinned{resize:both;overflow:auto;max-height:none;min-width:340px;min-height:200px;transition:none}
+.npanel.pinned .nphead{cursor:move;user-select:none}
 .ntcard{display:flex;align-items:center;gap:9px;padding:11px 6px;border-bottom:1px solid var(--line);font-family:var(--util);font-size:13px}
 .ntcard.done .nttx{text-decoration:line-through;opacity:.5}.ntcard .nttx{flex:1}.ntcard .ntdel{background:0;border:0;color:var(--muted);cursor:pointer;font-size:13px}
 #bell{position:relative} #bellcount{background:#C21F4A;color:#fff;border-radius:20px;font-size:10px;padding:1px 6px;margin-left:5px;display:none}
@@ -143,7 +151,7 @@ label.f{display:block;font-family:var(--util);font-size:10px;letter-spacing:.1em
 <button class="themebtn" id="themebtn">◐ Tema</button>
 <div class="npscrim" id="notifscrim"></div>
 <aside class="npanel" id="notifpanel">
-  <div class="nphead"><span>Funções &amp; Demandas</span><button class="btn" id="npclose" style="padding:2px 9px">×</button></div>
+  <div class="nphead"><span>Funções &amp; Demandas</span><span style="display:inline-flex;gap:6px"><button class="btn" id="nppin" title="Fixar: mexer no painel enquanto vê as demandas (arraste pelo topo, redimensione pelo canto)" style="padding:2px 9px">📌</button><button class="btn" id="npclose" style="padding:2px 9px">×</button></span></div>
   <div id="notifbody" style="flex:1;overflow-y:auto;padding:14px"></div>
 </aside>
 
@@ -388,7 +396,8 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const pe=prioEff(p);const manual=p.prioridade||0;
  const autoLbl=pe>manual?(pe===4?'ALTÍSSIMA · prazo estourado':(alta3m(p)?'ALTA · +3m':'ALTA · prazo perto')):'';
  const prio=(manual>0?'<span class="prio p'+manual+'">'+PRIOLB[manual]+'</span>':'')+(autoLbl?'<span class="prio p'+pe+'" title="prioridade automática pelo prazo">'+autoLbl+'</span>':'');
- const estudio=p.resp_estudio?'<span class="dp" data-prestpop="'+esc(p.resp_estudio)+'" style="font-size:12px;padding:4px 10px;cursor:pointer" title="ver todas as obras ativas deste estúdio">🎨 '+esc(p.resp_estudio)+'</span>':'';
+ const _estOpts=(typeof nomesEstudio==="function"?nomesEstudio():[]);const _estAll=(p.resp_estudio&&_estOpts.indexOf(p.resp_estudio)<0)?[p.resp_estudio].concat(_estOpts):_estOpts;
+ const estudio='<span style="display:inline-flex;align-items:center;gap:3px;vertical-align:middle">🎨<select class="inlinedp" data-inline="resp_estudio" data-id="'+p.id+'" onclick="event.stopPropagation()" title="estúdio (clique pra trocar)"><option value="">estúdio…</option>'+_estAll.map(n=>'<option '+(p.resp_estudio===n?"selected":"")+'>'+esc(n)+'</option>').join("")+'</select>'+(p.resp_estudio?'<span class="dp" data-prestpop="'+esc(p.resp_estudio)+'" style="cursor:pointer;padding:2px 7px" title="ver obras deste estúdio">👁</span>':'')+'</span>';
  const nped=funcoes.filter(f=>f.obra_id===p.id&&f.status!=='feito').length;
  const pend=nped?'<span class="dp" style="font-size:12px;padding:4px 10px;background:#8a6d1a;color:#fff;border:none" title="pendências abertas — abra a obra ou veja em Funções">📌 '+nped+' pendência'+(nped>1?'s':'')+'</span>':'';
  const projd=p.data_inicio?'<span class="dp" style="font-size:12px;padding:4px 10px" title="início → prazo do projeto (3 meses)">📅 '+dBR(p.data_inicio)+(prazoProj(p)?' → '+dBR(prazoProj(p).toISOString().slice(0,10)):'')+'</span>':'';
@@ -402,14 +411,14 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const CW=prodCols===2?168:184,CH=prodCols===2?244:262,TB=prodCols===2?190:440;
  const capaCol='<div style="flex:none;width:'+CW+'px;display:flex;flex-direction:column;gap:6px;align-items:center;align-self:flex-start">'
   +'<span data-vercapa="'+p.id+'" title="Ver / editar capa" style="cursor:pointer;width:'+CW+'px;height:'+CH+'px;border-radius:8px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f4f2ee;'+(p.capa_img?'':'font-size:12px;letter-spacing:.05em;color:var(--muted);border-style:dashed')+'">'+(p.capa_img?'<img src="'+p.capa_img+'" style="width:100%;height:100%;object-fit:cover">':'CAPA')+'</span>'
-  +'<span title="status da capa" style="font-size:11px;font-weight:600;text-align:center;line-height:1.15;color:#fff;background:'+capaCor+';border-radius:6px;padding:4px 6px;width:100%;box-sizing:border-box">'+capaStatus+'</span></div>';
+  +'<select class="inlinecapa" data-inline="capa_status_manual" data-id="'+p.id+'" onclick="event.stopPropagation()" style="background:'+capaCor+'" title="status da capa — Auto calcula sozinho; escolha um pra fixar">'+[['','Auto: '+capaStatus],['A definir','A definir'],['Em negociação','Em negociação'],['Em produção','Em produção'],['Em aprovação','Em aprovação'],['Pronta','Pronta'],['Pronta - Em aprovação','Pronta - Em aprovação'],['Aprovada','Aprovada']].map(o=>'<option value="'+esc(o[0])+'" '+((p.capa_status_manual||'')===o[0]?"selected":"")+'>'+esc(o[1])+'</option>').join("")+'</select></div>';
  return '<div class="row'+((p.bloqueio||p.bloqueio_desde)?' hasbloq':'')+'" data-id="'+p.id+'" style="--gc:'+c.c+';display:flex;gap:'+(prodCols===2?18:24)+'px;align-items:'+(prodCols===2?'stretch':'flex-start')+';flex-wrap:wrap'+(prodCols===2?';border-top:none':'')+'">'+capaCol+'<div style="flex:1 1 '+TB+'px;min-width:0'+(prodCols===2?';display:flex;flex-direction:column':'')+'">'
- +'<div class="rt">'+esc(p.original||p.titulo)+'<span class="pill">'+esc(p.status||"")+'</span>'+prio+dir+prazoBadge(p)+'</div>'
+ +'<div class="rt">'+esc(p.original||p.titulo)+'<select class="inlinepill" data-inline="status" data-id="'+p.id+'" onclick="event.stopPropagation()" title="status da obra (clique pra trocar)">'+STATUS_OPTS.map(s=>'<option '+(p.status===s?"selected":"")+'>'+esc(s)+'</option>').join("")+'</select>'+prio+dir+prazoBadge(p)+'</div>'
  +'<div class="ra">'+((p.original&&p.titulo)?esc(p.titulo)+' · ':"")+esc(p.autores||"")+((p.colecao&&p.colecao!=="Não")?' · <span class="dp" style="font-size:9px;padding:1px 6px">coleção</span>':"")+'</div>'+blo
  +'<div style="margin:13px 0">'+trilha(p)+inl+'</div>'
- +'<div class="rfoot" style="font-size:12px;gap:8px;margin-top:'+(prodCols===2?'auto':'10px')+(prodCols===2?';padding-top:10px':'')+'"><span class="dp '+esc(p.dono)+'" style="font-size:12px;padding:4px 11px">'+esc(p.dono||"—")+'</span>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
+ +'<div class="rfoot" style="font-size:12px;gap:8px;margin-top:'+(prodCols===2?'auto':'10px')+(prodCols===2?';padding-top:10px':'')+'"><select class="inlinedp" data-inline="dono" data-id="'+p.id+'" onclick="event.stopPropagation()" title="produtor da obra (clique pra trocar)"><option value="">— produtor —</option>'+DONOS.map(x=>'<option '+(p.dono===x?"selected":"")+'>'+esc(x)+'</option>').join("")+'</select>'+projd+estudio+pend+(p.updated_by?'<span style="font-size:11px">editado por '+esc(p.updated_by)+'</span>':"")+'</div>'
  +'<div class="rfoot" style="margin-top:5px"><a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(amzHref)+'" target="_blank" rel="noopener">🛒 Amazon</a>'+(p.discord_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener">💬 Discord</a>':'')+'<button class="lnkbtn" data-dt="'+p.id+'">📐 Dados técnicos</button>'+(p.drive_url?'<a class="lnkbtn" onclick="event.stopPropagation()" href="'+esc(p.drive_url)+'" target="_blank" rel="noopener">📁 Drive</a>':'')+'<button class="lnkbtn" data-relprod="'+p.id+'">📄 Relatório</button>'+'</div>'
- +'<div class="obshov" onclick="event.stopPropagation()"><span class="obsic" title="Observações da obra">📝</span><textarea class="obsedit" data-obsid="'+p.id+'" placeholder="Observações — passe o mouse para editar…">'+esc(p.obs||'')+'</textarea></div>'
+ +'<div class="obshov" onclick="event.stopPropagation()"><span class="obsic" title="Observações da obra">📝</span><textarea class="obsedit'+(obsPinned(p.id)?' pin':'')+'" data-obsid="'+p.id+'" placeholder="Observações — passe o mouse para editar…">'+esc(p.obs||'')+'</textarea><button class="obspin'+(obsPinned(p.id)?' on':'')+'" data-obspin="'+p.id+'" title="Fixar observação aberta">📌</button></div>'
  +'</div></div>';}
 
 function prazoEtapaTs(p){if(!p||!p.cur)return 8.64e15;const pz=(p.prazos||{})[p.cur];if(!pz||!pz.inicio)return 8.64e15;const ini=new Date(String(pz.inicio).slice(0,10)+"T00:00:00");if(isNaN(ini))return 8.64e15;const dias=parseInt(pz.dias||20,10);return ini.getTime()+dias*864e5;}
@@ -790,7 +799,7 @@ function alta3m(p){const dt=prazoProj(p);return !!dt && hojeBR()>dt && emProduca
 function prioEff(p){let b=p.prioridade||0;if(alta3m(p))b=Math.max(b,3);const d=venc(p);if(d!==null){if(d<0)b=Math.max(b,4);else if(d<=3)b=Math.max(b,3);}return b;}
 function venc(p){const pr=(p.prazos||{})[p.cur];if(!pr||!pr.inicio)return null;const dias=parseInt(pr.dias||20,10);const dt=new Date(String(pr.inicio).slice(0,10)+"T00:00:00");if(isNaN(dt))return null;dt.setDate(dt.getDate()+dias);
  return Math.round((dt-hojeBR())/864e5);}
-function prazoBadge(p){const d=venc(p);if(d===null)return"";let cls="ok",txt="em dia";if(d<0){cls="late";txt="vencido há "+(-d)+"d";}else if(d<=2){cls="warn";txt=(d===0?"vence hoje":"vence em "+d+"d");}return '<span class="pz '+cls+'">'+txt+'</span>';}
+function prazoBadge(p){const d=venc(p);if(d===null)return"";let cls="ok",txt="em dia";if(d<0){cls="late";txt="vencido há "+(-d)+"d";}else if(d<=2){cls="warn";txt=(d===0?"vence hoje":"vence em "+d+"d");}return '<span class="pz '+cls+'" title="prazo do projeto (início + 3 meses)" style="white-space:nowrap">Projeto: '+txt+'</span>';}
 /* prazo da ETAPA atual (selecionada na setinha), pra mostrar ao lado da prioridade */
 function prazoEtapaBadge(p){
  if(!p||!p.cur)return"";const pz=(p.prazos||{})[p.cur];if(!pz||!pz.inicio)return"";
@@ -801,8 +810,12 @@ function prazoEtapaBadge(p){
  let cls="ok";if(d<0)cls="late";else if(d<=3)cls="warn";
  const fimStr=("0"+fim.getDate()).slice(-2)+"/"+("0"+(fim.getMonth()+1)).slice(-2)+"/"+fim.getFullYear();
  const extra=d<0?" (venceu)":(d===0?" (hoje)":"");
- return '<span class="pz '+cls+'" title="prazo da etapa atual" style="white-space:nowrap">📅 '+fimStr+extra+'</span>';
+ return '<span class="pz '+cls+'" title="prazo da etapa atual (muda conforme a etapa selecionada)" style="white-space:nowrap">📅 Etapa: '+fimStr+extra+'</span>';
 }
+/* fixar observação aberta (persistente por obra) */
+function obsPinSet(){try{return new Set(JSON.parse(localStorage.getItem("obsPin")||"[]"));}catch(e){return new Set();}}
+function obsPinned(id){return obsPinSet().has(String(id));}
+function obsPinToggle(id){const s=obsPinSet();id=String(id);if(s.has(id))s.delete(id);else s.add(id);try{localStorage.setItem("obsPin",JSON.stringify([...s]));}catch(e){}}
 function viewEstudios(){
  const roles=[["resp_estudio","Estúdio"],["resp_copi","Copi"],["resp_revisao","Revisão"],["resp_capista","Capa"]];
  const map={};prod.forEach(p=>roles.forEach(r=>{const w=p[r[0]];if(w)(map[w]=map[w]||[]).push({p,role:r[1]});}));
@@ -1588,12 +1601,20 @@ function buildNotifPanel(){
   +'<input type="text" id="np-disc" value="'+esc(ed?ed.discord_url||"":"")+'" placeholder="link do Discord (opcional) — a pessoa clica e vai direto" style="width:100%;margin-bottom:8px">'
   +'<div class="grid2"><select id="np-a" style="width:100%">'+PESSOAS.map(dd=>'<option '+(dd===quemSel?"selected":"")+'>'+dd+'</option>').join("")+'</select><input type="date" id="np-p" value="'+(ed&&ed.prazo?esc(String(ed.prazo).slice(0,10)):"")+'" style="width:100%"></div>'
   +(ed?'<div class="grid2" style="margin-top:10px"><button class="btn gold" id="np-add" style="width:100%">Salvar alterações</button><button class="btn" id="np-cancel" style="width:100%">Cancelar</button></div>':'<div style="margin-top:10px"><button class="btn gold" id="np-add" style="width:100%">+ Adicionar demanda</button></div>')
-  +'</div><div id="notiflist"></div>';
+  +'</div>'+(ed?'<div class="util" style="font-size:11px;color:var(--muted);text-align:center;padding:4px">Editando só esta pendência · use <b>Cancelar</b> pra ver todas.</div>':'<div id="notiflist"></div>');
  $("#np-pref").onchange=e=>setNotifPref(e.target.value);
  if(ed&&$("#np-cancel"))$("#np-cancel").onclick=()=>{npEdit=null;buildNotifPanel();};
- renderNotif();
+ if(!ed)renderNotif();
 }
-function toggleNotif(){const el=$("#notifpanel");const abrindo=!el.classList.contains("on");el.classList.toggle("on");$("#notifscrim").classList.toggle("on");if(abrindo){buildNotifPanel();pedirPermissaoNotif();}}
+function toggleNotif(){const el=$("#notifpanel");const abrindo=!el.classList.contains("on");el.classList.toggle("on");if(!npPinned)$("#notifscrim").classList.toggle("on");if(abrindo){buildNotifPanel();pedirPermissaoNotif();}}
+let npPinned=false,npDrag=null;
+function npSetPinned(on){npPinned=on;const el=$("#notifpanel"),sc=$("#notifscrim"),pin=$("#nppin");if(!el)return;el.classList.toggle("pinned",on);if(pin){pin.classList.toggle("gold",on);pin.textContent=on?"📌 Fixado":"📌";}
+ if(on){if(sc)sc.classList.remove("on");const r=el.getBoundingClientRect();el.style.transform="none";el.style.left=r.left+"px";el.style.top=r.top+"px";}
+ else{el.style.transform="";el.style.left="";el.style.top="";el.style.width="";el.style.height="";if(el.classList.contains("on")&&sc)sc.classList.add("on");}}
+function npInitDrag(){const head=document.querySelector("#notifpanel .nphead");if(!head||head._dragOn)return;head._dragOn=true;
+ head.addEventListener("pointerdown",e=>{if(!npPinned||e.target.closest("button"))return;const el=$("#notifpanel");const r=el.getBoundingClientRect();npDrag={dx:e.clientX-r.left,dy:e.clientY-r.top};el.style.transform="none";try{head.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();});
+ head.addEventListener("pointermove",e=>{if(!npDrag)return;const el=$("#notifpanel");el.style.left=Math.max(0,Math.min(window.innerWidth-80,e.clientX-npDrag.dx))+"px";el.style.top=Math.max(0,Math.min(window.innerHeight-40,e.clientY-npDrag.dy))+"px";});
+ const end=()=>{npDrag=null;};head.addEventListener("pointerup",end);head.addEventListener("pointercancel",end);}
 function pedirPermissaoNotif(){try{if(("Notification" in window)&&Notification.permission==="default")Notification.requestPermission();}catch(e){}}
 function notificarDesktop(f){try{
  if(!("Notification" in window)||Notification.permission!=="granted")return;
@@ -1675,6 +1696,7 @@ document.body.addEventListener("click",e=>{
  if(e.target.id==="fvenc"){filt.venc=!filt.venc;render();return;}
  if(e.target.closest("#bell")){toggleNotif();return;}
  if(e.target.id==="npclose"||e.target.id==="notifscrim"){toggleNotif();return;}
+ if(e.target.closest("#nppin")){npSetPinned(!npPinned);return;}
  if(e.target.id==="np-add"){const t=$("#np-t").value.trim();if(!t){$("#np-t").focus();return;}
    const dados={titulo_demanda:t,descricao:($("#np-d")?$("#np-d").value.trim():""),atribuido_a:($("#np-a")?$("#np-a").value:meNome()),prazo:($("#np-p")?$("#np-p").value||null:null),obra_id:($("#np-obra")?obraIdPorLabel($("#np-obra").value):null),etapa:($("#np-et")?$("#np-et").value||null:null),discord_url:($("#np-disc")?$("#np-disc").value.trim():"")};
    if(npEdit){patchFuncao(npEdit,dados).then(()=>{npEdit=null;render();buildNotifPanel();});}
@@ -1692,6 +1714,7 @@ document.body.addEventListener("click",e=>{
  const dtb=e.target.closest("[data-dt]");if(dtb){openDT(dtb.dataset.dt);return;}
  const gd=e.target.closest("[data-gerardt]");if(gd){gerarDT(gd.dataset.gerardt);return;}
  const rp=e.target.closest("[data-relprod]");if(rp){gerarRelatorioProd(rp.dataset.relprod);return;}
+ const opn=e.target.closest("[data-obspin]");if(opn){obsPinToggle(opn.dataset.obspin);const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  const ctb=e.target.closest("[data-contrato]");if(ctb){openContrato(ctb.dataset.contrato);return;}
  const vc=e.target.closest("[data-vercapa]");if(vc){openCapa(vc.dataset.vercapa);return;}
  const ppx=e.target.closest("[data-prestpop]");if(ppx){openPrestadorPop(ppx.dataset.prestpop);return;}
@@ -1702,7 +1725,7 @@ document.body.addEventListener("click",e=>{
  const cfl=e.target.closest("[data-capafilt]");if(cfl){capaFilt=cfl.dataset.capafilt;$("#view").innerHTML=viewCapas();return;}
  const pcl=e.target.closest("[data-prodcols]");if(pcl){prodCols=parseInt(pcl.dataset.prodcols,10);render();return;}
  const oob=e.target.closest("[data-openobra]");if(oob){const np2=$("#notifpanel");if(np2)np2.classList.remove("on");const ns2=$("#notifscrim");if(ns2)ns2.classList.remove("on");openEditor(oob.dataset.openobra);return;}
- const efx=e.target.closest("[data-editfunc]");if(efx){npEdit=efx.dataset.editfunc;const np=$("#notifpanel");if(!np.classList.contains("on")){np.classList.add("on");$("#notifscrim").classList.add("on");}buildNotifPanel();return;}
+ const efx=e.target.closest("[data-editfunc]");if(efx){npEdit=efx.dataset.editfunc;const np=$("#notifpanel");if(!np.classList.contains("on")){np.classList.add("on");if(!npPinned)$("#notifscrim").classList.add("on");}buildNotifPanel();return;}
  const dfx=e.target.closest("[data-delfunc]");if(dfx){delFuncao(dfx.dataset.delfunc);return;}
  const cc=e.target.closest("[data-capa]");if(cc){openCapa(cc.dataset.capa);return;}
  const op=e.target.closest("[data-open]");if(op){openEditor(op.dataset.open);return;}
@@ -1737,7 +1760,7 @@ document.body.addEventListener("change",e=>{
  const fc=e.target.closest("[data-func]");if(fc){patchFuncao(fc.dataset.func,{status:fc.checked?"feito":"pendente"});render();return;}
  const nc=e.target.closest("[data-notif]");if(nc){patchNotif(nc.dataset.notif,{feito:nc.checked});renderNotif();return;}
  const ob=e.target.closest(".obsedit");if(ob&&ob.dataset.obsid){patchProd(ob.dataset.obsid,{obs:ob.value.trim()});toast("Observação salva.");return;}
- const il=e.target.closest("[data-inline]");if(il){let v=il.value;if(il.dataset.inline==="prioridade")v=parseInt(v,10);patchProd(il.dataset.id,{[il.dataset.inline]:v});const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
+ const il=e.target.closest("[data-inline]");if(il){let v=il.value;if(il.dataset.inline==="prioridade")v=parseInt(v,10);if(il.dataset.inline==="capa_status_manual"&&v==="")v=null;patchProd(il.dataset.id,{[il.dataset.inline]:v});const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  const co=e.target.closest("[data-co]");if(co){let v=co.value;if(co.dataset.co==="prioridade")v=parseInt(v,10);if(co.dataset.co==="prazo"&&!v)v=null;patchProd(co.dataset.id,{[co.dataset.co]:v});return;}
  if(e.target.id==="c-selo")fillCurOpts();
  if(e.target.id==="scrim")closeEditor();
@@ -1799,6 +1822,7 @@ async function startLive(){sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.
  try{await checkAutoFuncs();}catch(e){console.error("[painel] auto-funcs:",e);}}
 window.addEventListener("DOMContentLoaded",async()=>{
  try{const t=localStorage.getItem("tema");if(t)document.documentElement.dataset.theme=t;}catch(e){}
+ npInitDrag();
  fillLogin();
  if(MODE==="live"&&window.supabase){$("#lg-btn").onclick=async()=>{const{error}=await sb.auth.signInWithPassword({email:$("#lg-email").value.trim(),password:$("#lg-pass").value});if(error)$("#lg-err").textContent="Não deu: "+error.message;else location.reload();};$("#lg-pass").onkeydown=e=>{if(e.key==="Enter")$("#lg-btn").click();};try{await startLive();}catch(e){MODE="demo";seedDemo();paintHeader();render();}}
  else{if(MODE==="live")MODE="demo";seedDemo();paintHeader();render();}
