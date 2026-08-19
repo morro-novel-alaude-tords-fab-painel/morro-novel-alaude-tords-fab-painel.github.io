@@ -808,9 +808,9 @@ function prazoEtapaBadge(p){
  const hoje=(typeof hojeBR==="function")?hojeBR():new Date();
  const d=Math.round((fim-hoje)/864e5);
  let cls="ok";if(d<0)cls="late";else if(d<=3)cls="warn";
- const fimStr=("0"+fim.getDate()).slice(-2)+"/"+("0"+(fim.getMonth()+1)).slice(-2)+"/"+fim.getFullYear();
+ const fmt=dt=>("0"+dt.getDate()).slice(-2)+"/"+("0"+(dt.getMonth()+1)).slice(-2)+"/"+dt.getFullYear();
  const extra=d<0?" (venceu)":(d===0?" (hoje)":"");
- return '<span class="pz '+cls+'" title="prazo da etapa atual (muda conforme a etapa selecionada)" style="white-space:nowrap">📅 Etapa: '+fimStr+extra+'</span>';
+ return '<span class="pz '+cls+'" title="prazo da etapa atual: início → fim (muda conforme a etapa selecionada)" style="white-space:nowrap">📅 Etapa: '+fmt(ini)+' → '+fmt(fim)+extra+'</span>';
 }
 /* fixar observação aberta (persistente por obra) */
 function obsPinSet(){try{return new Set(JSON.parse(localStorage.getItem("obsPin")||"[]"));}catch(e){return new Set();}}
