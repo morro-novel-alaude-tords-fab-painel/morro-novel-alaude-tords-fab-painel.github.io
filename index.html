@@ -260,7 +260,7 @@ const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
 let prod=[],estoque=[],reimp=[],arquivadas=[],tab="prod",filt={sel:"all",q:"",mine:true,prio:false,venc:false},collapsed={},prodLoadOk=false;
-let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=2;
+let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=2,prodSort="prio";
 function sortFuncs(a,b){
  if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
  if(funcSort==="prioridade"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (ob?prioEff(ob):-1)-(oa?prioEff(oa):-1);}
@@ -397,7 +397,7 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  const amzHref=p.amazon_url||('https://www.amazon.com/s?k='+encodeURIComponent((p.original||p.titulo||'')+' livro'));
  const disc=p.discord_url?'<a class="disc" href="'+esc(p.discord_url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">Discord ↗</a>':'';
  const inl='<div class="inline" onclick="event.stopPropagation()"><select data-inline="cur" data-id="'+p.id+'"><option value="">etapa…</option>'+st.map(k=>'<option value="'+k+'" '+(p.cur===k?"selected":"")+'>'+(STAGE_LABELS[k]||k)+'</option>').join("")+'</select>'
-  +'<select data-inline="prioridade" data-id="'+p.id+'">'+[[0,"prio —"],[1,"Baixa"],[2,"Média"],[3,"Alta"],[4,"Altíssima"]].map(x=>'<option value="'+x[0]+'" '+((p.prioridade||0)===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select></div>';
+  +'<select data-inline="prioridade" data-id="'+p.id+'">'+[[0,"prio —"],[1,"Baixa"],[2,"Média"],[3,"Alta"],[4,"Altíssima"]].map(x=>'<option value="'+x[0]+'" '+((p.prioridade||0)===x[0]?"selected":"")+'>'+x[1]+'</option>').join("")+'</select>'+prazoEtapaBadge(p)+'</div>';
  const capaStatus=capaStatusLabel(p);const capaCor=(capaStatus==='Aprovada'||capaStatus==='Pronta')?'#2E5A3E':(capaStatus==='Em negociação'?'#5A5A8A':(capaStatus.indexOf('aprova')>=0?'#B8862F':'#6b6b6b'));
  const CW=prodCols===2?168:184,CH=prodCols===2?244:262,TB=prodCols===2?190:440;
  const capaCol='<div style="flex:none;width:'+CW+'px;display:flex;flex-direction:column;gap:6px;align-items:center;align-self:flex-start">'
@@ -412,10 +412,19 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  +'<div class="obshov" onclick="event.stopPropagation()"><span class="obsic" title="Observações da obra">📝</span><textarea class="obsedit" data-obsid="'+p.id+'" placeholder="Observações — passe o mouse para editar…">'+esc(p.obs||'')+'</textarea></div>'
  +'</div></div>';}
 
+function prazoEtapaTs(p){if(!p||!p.cur)return 8.64e15;const pz=(p.prazos||{})[p.cur];if(!pz||!pz.inicio)return 8.64e15;const ini=new Date(String(pz.inicio).slice(0,10)+"T00:00:00");if(isNaN(ini))return 8.64e15;const dias=parseInt(pz.dias||20,10);return ini.getTime()+dias*864e5;}
+function prodSortCmp(){switch(prodSort){
+ case "titulo":return (a,b)=>(a.original||a.titulo||'').localeCompare(b.original||b.titulo||'','pt-BR');
+ case "inicio":return (a,b)=>String(b.data_inicio||'').localeCompare(String(a.data_inicio||''));
+ case "prazoProj":return (a,b)=>{const da=venc(a),db=venc(b);return (da===null?1e9:da)-(db===null?1e9:db);};
+ case "prazoEt":return (a,b)=>prazoEtapaTs(a)-prazoEtapaTs(b);
+ default:return (a,b)=>prioEff(b)-prioEff(a);
+}}
 function prodListHTML(){
  const q=filt.q.toLowerCase();
  let hit=prod.filter(p=>{if(filt.sel!=="all"&&p.selo!==filt.sel)return false;if(filt.mine&&p.dono!==meNome())return false;if(filt.prio&&(p.prioridade||0)<3)return false;if(p.status==="P&G"||(p.local||'')==='grafica'||(p.local||'')==='estoque')return false;if(filt.venc){const _d=venc(p);if(!(_d!==null&&_d<0))return false;}if(q&&!((p.titulo+" "+(p.original||"")+" "+(p.autores||"")).toLowerCase().includes(q)))return false;return true;});
- return SELOS.filter(s=>hit.some(p=>p.selo===s)).map(s=>{const c=cfg(s);const rows=hit.filter(p=>p.selo===s).sort((a,b)=>prioEff(b)-prioEff(a));
+ const cmp=prodSortCmp();
+ return SELOS.filter(s=>hit.some(p=>p.selo===s)).map(s=>{const c=cfg(s);const rows=hit.filter(p=>p.selo===s).sort(cmp);
    const corpo=collapsed[s]?'':(prodCols===2?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:12px">'+rows.map(p=>'<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)">'+prodRow(p)+'</div>').join("")+'</div>':rows.map(prodRow).join(""));
    return '<div class="selogroup" style="--gc:'+c.c+'"><div class="selohead" data-collapse="'+s+'" style="background:'+c.c+';cursor:pointer"><span class="lc"><img src="'+c.logo+'"></span><span class="sn">'+s+'</span><span class="stag">'+c.tag+'</span><span class="cnt">'+rows.length+' títulos <span style="margin-left:6px;display:inline-block;transition:.15s;transform:rotate('+(collapsed[s]?'-90deg':'0deg')+')">▾</span></span></div>'+corpo+'</div>';
  }).join("")||'<div class="empty">Nada aqui com esse filtro.</div>';
@@ -426,7 +435,7 @@ function viewProd(){
  return '<div class="controls"><button class="chip" aria-pressed="'+(filt.sel==="all")+'" data-sel="all">Todos</button>'
   +SELOS.map(s=>'<button class="chip" aria-pressed="'+(filt.sel===s)+'" data-sel="'+s+'">'+s+'</button>').join("")
   +'<button class="chip" aria-pressed="'+filt.mine+'" id="fmine">Minhas obras</button>'
-  +'<button class="chip" aria-pressed="'+filt.prio+'" id="fprio">Só Alta</button>'
+  +'<select id="prodSort" class="chip" title="Ordenar as obras" style="cursor:pointer">'+[["prio","Prioridade"],["prazoEt","Prazo da etapa"],["prazoProj","Prazo do projeto"],["titulo","Título A–Z"],["inicio","Início recente"]].map(o=>'<option value="'+o[0]+'" '+(prodSort===o[0]?"selected":"")+'>Ordenar: '+o[1]+'</option>').join("")+'</select>'
   +'<input type="search" id="q" placeholder="Buscar título, autor" value="'+esc(filt.q)+'">'
   +'<button class="chip" aria-pressed="'+(prodCols===1)+'" data-prodcols="1" title="1 livro por linha">▬ 1 col</button>'
   +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="2 livros por linha">▥ 2 col</button>'
@@ -782,6 +791,18 @@ function prioEff(p){let b=p.prioridade||0;if(alta3m(p))b=Math.max(b,3);const d=v
 function venc(p){const pr=(p.prazos||{})[p.cur];if(!pr||!pr.inicio)return null;const dias=parseInt(pr.dias||20,10);const dt=new Date(String(pr.inicio).slice(0,10)+"T00:00:00");if(isNaN(dt))return null;dt.setDate(dt.getDate()+dias);
  return Math.round((dt-hojeBR())/864e5);}
 function prazoBadge(p){const d=venc(p);if(d===null)return"";let cls="ok",txt="em dia";if(d<0){cls="late";txt="vencido há "+(-d)+"d";}else if(d<=2){cls="warn";txt=(d===0?"vence hoje":"vence em "+d+"d");}return '<span class="pz '+cls+'">'+txt+'</span>';}
+/* prazo da ETAPA atual (selecionada na setinha), pra mostrar ao lado da prioridade */
+function prazoEtapaBadge(p){
+ if(!p||!p.cur)return"";const pz=(p.prazos||{})[p.cur];if(!pz||!pz.inicio)return"";
+ const ini=new Date(String(pz.inicio).slice(0,10)+"T00:00:00");if(isNaN(ini))return"";
+ const dias=parseInt(pz.dias||20,10);const fim=new Date(ini.getTime());fim.setDate(fim.getDate()+dias);
+ const hoje=(typeof hojeBR==="function")?hojeBR():new Date();
+ const d=Math.round((fim-hoje)/864e5);
+ let cls="ok";if(d<0)cls="late";else if(d<=3)cls="warn";
+ const fimStr=("0"+fim.getDate()).slice(-2)+"/"+("0"+(fim.getMonth()+1)).slice(-2)+"/"+fim.getFullYear();
+ const extra=d<0?" (venceu)":(d===0?" (hoje)":"");
+ return '<span class="pz '+cls+'" title="prazo da etapa atual" style="white-space:nowrap">📅 '+fimStr+extra+'</span>';
+}
 function viewEstudios(){
  const roles=[["resp_estudio","Estúdio"],["resp_copi","Copi"],["resp_revisao","Revisão"],["resp_capista","Capa"]];
  const map={};prod.forEach(p=>roles.forEach(r=>{const w=p[r[0]];if(w)(map[w]=map[w]||[]).push({p,role:r[1]});}));
@@ -1712,6 +1733,7 @@ document.body.addEventListener("input",e=>{
  const qi=document.getElementById("q");if(qi){const v=qi.value;qi.focus();try{qi.setSelectionRange(v.length,v.length)}catch(_){}}}});
 document.body.addEventListener("change",e=>{
  if(e.target.id==="funcsort"){funcSort=e.target.value;$("#view").innerHTML=viewFuncoes();return;}
+ if(e.target.id==="prodSort"){prodSort=e.target.value;const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  const fc=e.target.closest("[data-func]");if(fc){patchFuncao(fc.dataset.func,{status:fc.checked?"feito":"pendente"});render();return;}
  const nc=e.target.closest("[data-notif]");if(nc){patchNotif(nc.dataset.notif,{feito:nc.checked});renderNotif();return;}
  const ob=e.target.closest(".obsedit");if(ob&&ob.dataset.obsid){patchProd(ob.dataset.obsid,{obs:ob.value.trim()});toast("Observação salva.");return;}
