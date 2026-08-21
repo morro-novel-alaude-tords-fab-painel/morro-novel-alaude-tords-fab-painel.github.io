@@ -547,6 +547,7 @@ function openPrestador(id){
  d.innerHTML='<button class="x" id="dx">×</button>'
   +'<div class="util" style="font-size:11px;color:var(--muted)">'+(novo?'Novo prestador':'Prestador'+(p.ativo===false?' · fora do time':''))+'</div>'
   +'<h3>'+esc(p.nome||'Adicionar ao time')+'</h3>'
+  +(novo?'':'<button class="btn" id="pr-obras" style="width:100%;margin-bottom:4px">👁 Ver projetos ativos</button>')
   +'<label class="f">Nome</label><input type="text" id="pr-nome" value="'+esc(p.nome||'')+'" style="width:100%">'
   +'<label class="f">O que essa pessoa faz</label>'
   +'<div class="stopsedit" id="pr-papeis">'+PAPEIS.map(t=>'<label><input type="checkbox" value="'+esc(t)+'" '+((p.papeis||[]).includes(t)?'checked':'')+'>'+esc(t)+'</label>').join('')+'</div>'
@@ -565,6 +566,7 @@ function openPrestador(id){
     +'</div>':'');
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#pr-cancel").onclick=closeEditor;
+ if($("#pr-obras"))$("#pr-obras").onclick=()=>openPrestadorPop(p.nome);
  if($("#pr-save"))$("#pr-save").onclick=async()=>{
   const nome=$("#pr-nome").value.trim(); if(!nome){toast('Falta o nome.','err');return;}
   const papeis=[...d.querySelectorAll('#pr-papeis input:checked')].map(i=>i.value);
@@ -628,7 +630,7 @@ function viewPrestadores(){
  const rowP=p=>{const obras=obrasDe(p);const carga=obras.length;const alto=carga>=3;
    const lista=carga?obras.map(o=>'<span class="dp" style="font-size:9px;padding:1px 6px;margin:0 3px 3px 0;display:inline-block;background:'+o.c+';color:#fff;border:none">'+esc(o.t)+' · '+o.r+'</span>').join(''):'<span style="color:var(--muted)">—</span>';
    return '<tr'+(prestEditavel?' data-prest="'+p.id+'" style="cursor:pointer"':'')+(p.ativo===false?' style="opacity:.6"':'')+'>'
-   +'<td style="vertical-align:top"><b>'+esc(p.nome)+'</b>'+(p.ativo===false?' <span class="pz late">fora</span>':'')+(alto?' <span class="pz late" title="3+ obras ativas — evite atribuir mais">carga alta</span>':'')+'<div class="util" style="font-size:10px;color:var(--muted);margin-top:2px">'+carga+' obra'+(carga===1?'':'s')+'</div></td>'
+   +'<td style="vertical-align:top"><b>'+esc(p.nome)+'</b> <span class="dp" data-prestpop="'+esc(p.nome)+'" style="cursor:pointer;padding:1px 6px" title="ver projetos ativos">👁</span>'+(p.ativo===false?' <span class="pz late">fora</span>':'')+(alto?' <span class="pz late" title="3+ obras ativas — evite atribuir mais">carga alta</span>':'')+'<div class="util" style="font-size:10px;color:var(--muted);margin-top:2px">'+carga+' obra'+(carga===1?'':'s')+'</div></td>'
    +'<td class="util" style="font-size:12px;vertical-align:top">'+((p.papeis||[]).join(', ')||'<span style="color:var(--muted)">não definido</span>')+'</td>'
    +'<td class="util" style="font-size:11px;vertical-align:top">'+((p.canais||'').includes('+')?'<span class="pz ok">os dois</span>':esc((p.canais||'')==='estudios'?'estúdios':((p.canais||'')==='copi-revisao'?'copi e revisão':'—')))+'</td>'
    +'<td class="util" style="font-size:11px;max-width:360px;vertical-align:top">'+lista+'</td></tr>';};
