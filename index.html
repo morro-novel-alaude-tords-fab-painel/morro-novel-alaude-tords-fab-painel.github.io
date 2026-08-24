@@ -267,8 +267,8 @@ const SELOS=Object.keys(SELOCFG);
 const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
-let prod=[],estoque=[],reimp=[],arquivadas=[],tab="prod",filt={sel:"all",q:"",mine:true,prio:false,venc:false},collapsed={},prodLoadOk=false;
-let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=2,prodSort="prio";
+let prod=[],estoque=[],reimp=[],arquivadas=[],tab="prod",filt={sel:"all",q:"",mine:true,prio:false,venc:false,etapa:"all"},collapsed={},prodLoadOk=false;
+let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=2,prodView="cards",prodSort="prio";
 function sortFuncs(a,b){
  if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
  if(funcSort==="prioridade"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (ob?prioEff(ob):-1)-(oa?prioEff(oa):-1);}
@@ -340,27 +340,29 @@ function trilha(p){const st=cfg(p.selo).stages;
   if(k==="revisao"&&!ehFiccao(p.selo)&&p.revisao_tipo)rot="Rev. "+p.revisao_tipo.slice(0,4)+".";
   const who=quem?'<span class="who2">'+esc(quem)+'</span>':'';
   return '<div class="stop '+c+'"><i></i><span>'+rot+'</span>'+who+'</div>'}).join("")+'</div>';}
-function openPrestadorPop(nome){
+function openPrestadorPop(nome,todas){
  if(!nome)return;
  const sa2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
  const tk=t=>sa2(t).split(' ').filter(w=>w&&!['jr','filho','neto','de','da','do','dos','das','e'].includes(w));
  const alvo=tk(nome);
  const roles=[['resp_estudio','Estúdio / Tradução','estudio'],['resp_design','Design','estudio'],['resp_copi','Copidesque','copidesque'],['resp_revisao','Revisão','revisao'],['resp_capista','Capa','capa']];
  const prazoEt=(p,k)=>{const pr=(p.prazos||{})[k];if(!pr||!pr.inicio)return '';const ini=new Date(String(pr.inicio).slice(0,10)+'T00:00:00');if(isNaN(ini))return '';const dias=parseInt(pr.dias||20,10);const fim=new Date(ini.getTime());fim.setDate(fim.getDate()+dias);return dBR(fim.toISOString().slice(0,10));};
+ const universo=todas?prod.concat(arquivadas||[]):prod;
  const hits=[];
- prod.forEach(p=>{if(!emProducao(p))return;roles.forEach(r=>{const t=tk(p[r[0]]||'');if(t.length&&alvo.length&&t[0]===alvo[0]&&t[t.length-1]===alvo[alvo.length-1])hits.push({p:p,lbl:r[1],k:r[2]});});});
+ universo.forEach(p=>{if(!todas&&!emProducao(p))return;roles.forEach(r=>{const t=tk(p[r[0]]||'');if(t.length&&alvo.length&&t[0]===alvo[0]&&t[t.length-1]===alvo[alvo.length-1])hits.push({p:p,lbl:r[1],k:r[2]});});});
  const d=$("#drawer");d.onpaste=null;
- const ativas=hits.filter(x=>x.p.cur===x.k).length;
- let h='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Prestador · obras</div><h3>'+esc(nome)+'</h3>';
- if(!hits.length){h+='<div class="empty">Nenhuma obra ativa com este prestador no momento.</div>';}
+ const ativoAgora=(p,k)=>emProducao(p)&&!p.arquivada&&p.cur===k;
+ const ativas=hits.filter(x=>ativoAgora(x.p,x.k)).length;
+ let h='<button class="x" id="dx">×</button><div class="util" style="font-size:11px;color:var(--muted)">Prestador · '+(todas?'projetos (ativos e concluídos)':'obras')+'</div><h3>'+esc(nome)+'</h3>';
+ if(!hits.length){h+='<div class="empty">'+(todas?'Nenhuma obra encontrada com este prestador.':'Nenhuma obra ativa com este prestador no momento.')+'</div>';}
  else{
   const byRole={};hits.forEach(x=>{(byRole[x.lbl]=byRole[x.lbl]||[]).push(x);});
   h+='<div class="util" style="font-size:12px;color:var(--muted);margin:2px 0 10px">'+hits.length+' etapa(s) — <b>'+ativas+' ativa(s) agora</b>. Clique num livro pra abrir o painel dele.</div>';
   roles.forEach(r=>{const arr=byRole[r[1]];if(!arr||!arr.length)return;
-   arr.sort((a,b)=>((b.p.cur===b.k)?1:0)-((a.p.cur===a.k)?1:0));
+   arr.sort((a,b)=>(ativoAgora(b.p,b.k)?1:0)-(ativoAgora(a.p,a.k)?1:0));
    h+='<div class="selogroup" style="margin-top:10px"><div class="selohead" style="background:#3A3340"><span class="sn">'+esc(r[1])+'</span><span class="cnt">'+arr.length+'</span></div>'
-    +arr.map(x=>{const p=x.p;const ativa=(p.cur===x.k);const pz=prazoEt(p,x.k);
-      const badge=ativa?'<span class="dp" style="font-size:9px;padding:1px 6px;background:#2E5A3E;color:#fff;border:none">🟢 etapa ativa</span>':'<span class="dp" style="font-size:9px;padding:1px 6px;color:var(--muted)">⚪ não é a etapa atual (agora: '+esc(STAGE_LABELS[p.cur]||p.cur||'—')+')</span>';
+    +arr.map(x=>{const p=x.p;const emprod=emProducao(p)&&!p.arquivada;const ativa=ativoAgora(p,x.k);const pz=prazoEt(p,x.k);
+      const badge=!emprod?'<span class="dp" style="font-size:9px;padding:1px 6px;color:var(--muted)">✔ concluída / fora de produção</span>':(ativa?'<span class="dp" style="font-size:9px;padding:1px 6px;background:#2E5A3E;color:#fff;border:none">🟢 etapa ativa</span>':'<span class="dp" style="font-size:9px;padding:1px 6px;color:var(--muted)">⚪ não é a etapa atual (agora: '+esc(STAGE_LABELS[p.cur]||p.cur||'—')+')</span>');
       const pzt=pz?'<span class="dp" style="font-size:9px;padding:1px 6px" title="prazo desta etapa">📅 prazo '+esc(pz)+'</span>':'';
       return '<div data-open="'+p.id+'" style="cursor:pointer;padding:9px 11px;border-top:1px solid var(--line)'+(ativa?';background:rgba(46,90,62,.05)':'')+'"><div style="font-family:var(--serif);font-size:15px">'+esc(p.original||p.titulo)+'</div><div class="util" style="font-size:12px;color:var(--muted);margin:2px 0 5px">'+esc(p.selo)+' · '+esc(p.titulo)+'</div><div style="display:flex;gap:5px;flex-wrap:wrap">'+badge+pzt+'</div></div>';}).join('')+'</div>';});
  }
@@ -423,6 +425,19 @@ function prodRow(p){const c=cfg(p.selo);const st=cfg(p.selo).stages;
  +'</div></div>';}
 
 function prazoEtapaTs(p){if(!p||!p.cur)return 8.64e15;const pz=(p.prazos||{})[p.cur];if(!pz||!pz.inicio)return 8.64e15;const ini=new Date(String(pz.inicio).slice(0,10)+"T00:00:00");if(isNaN(ini))return 8.64e15;const dias=parseInt(pz.dias||20,10);return ini.getTime()+dias*864e5;}
+function prodLineHTML(p){
+ const c=cfg(p.selo);
+ const etLbl=p.cur?(STAGE_LABELS[p.cur]||p.cur):'—';
+ const et='<span class="dp" style="font-size:11px;padding:2px 9px;background:'+c.c+';color:#fff;border:none;white-space:nowrap" title="etapa ativa">'+esc(etLbl)+'</span>';
+ const pj=prazoProj(p);
+ let pz;
+ if(pj){const ven=hojeBR()>pj;pz='<span class="dp" style="font-size:11px;padding:2px 8px;white-space:nowrap;min-width:104px;text-align:right'+(ven?';color:#C21F4A;font-weight:600':';color:var(--muted)')+'" title="prazo do projeto (início + 3 meses)">📅 '+dBR(pj.toISOString().slice(0,10))+'</span>';}
+ else{pz='<span class="dp" style="font-size:11px;padding:2px 8px;white-space:nowrap;min-width:104px;text-align:right;color:var(--muted);opacity:.6" title="sem data de início do projeto">📅 —</span>';}
+ const sub=esc(p.selo)+((p.original&&p.titulo)?' · '+esc(p.titulo):'')+(p.autores?' · '+esc(p.autores):'');
+ return '<div data-open="'+p.id+'" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:9px 12px;border-left:4px solid '+c.c+';border-top:1px solid var(--line)">'
+  +'<div style="flex:1;min-width:0;overflow:hidden"><div style="font-family:var(--serif);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(p.original||p.titulo)+'</div>'
+  +'<div class="util" style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sub+'</div></div>'+et+pz+'</div>';
+}
 function prodSortCmp(){switch(prodSort){
  case "titulo":return (a,b)=>(a.original||a.titulo||'').localeCompare(b.original||b.titulo||'','pt-BR');
  case "inicio":return (a,b)=>String(b.data_inicio||'').localeCompare(String(a.data_inicio||''));
@@ -432,23 +447,27 @@ function prodSortCmp(){switch(prodSort){
 }}
 function prodListHTML(){
  const q=filt.q.toLowerCase();
- let hit=prod.filter(p=>{if(filt.sel!=="all"&&p.selo!==filt.sel)return false;if(filt.mine&&p.dono!==meNome())return false;if(filt.prio&&(p.prioridade||0)<3)return false;if(p.status==="P&G"||(p.local||'')==='grafica'||(p.local||'')==='estoque')return false;if(filt.venc){const _d=venc(p);if(!(_d!==null&&_d<0))return false;}if(q&&!((p.titulo+" "+(p.original||"")+" "+(p.autores||"")).toLowerCase().includes(q)))return false;return true;});
+ let hit=prod.filter(p=>{if(filt.sel!=="all"&&p.selo!==filt.sel)return false;if(filt.mine&&p.dono!==meNome())return false;if(filt.prio&&(p.prioridade||0)<3)return false;if(filt.etapa!=="all"&&p.cur!==filt.etapa)return false;if(p.status==="P&G"||(p.local||'')==='grafica'||(p.local||'')==='estoque')return false;if(filt.venc){const _d=venc(p);if(!(_d!==null&&_d<0))return false;}if(q&&!((p.titulo+" "+(p.original||"")+" "+(p.autores||"")).toLowerCase().includes(q)))return false;return true;});
  const cmp=prodSortCmp();
  return SELOS.filter(s=>hit.some(p=>p.selo===s)).map(s=>{const c=cfg(s);const rows=hit.filter(p=>p.selo===s).sort(cmp);
-   const corpo=collapsed[s]?'':(prodCols===2?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:12px">'+rows.map(p=>'<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)">'+prodRow(p)+'</div>').join("")+'</div>':rows.map(prodRow).join(""));
+   const corpo=collapsed[s]?'':(prodView==="lista"?rows.map(prodLineHTML).join(""):(prodCols===2?'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:12px">'+rows.map(p=>'<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)">'+prodRow(p)+'</div>').join("")+'</div>':rows.map(prodRow).join("")));
    return '<div class="selogroup" style="--gc:'+c.c+'"><div class="selohead" data-collapse="'+s+'" style="background:'+c.c+';cursor:pointer"><span class="lc"><img src="'+c.logo+'"></span><span class="sn">'+s+'</span><span class="stag">'+c.tag+'</span><span class="cnt">'+rows.length+' títulos <span style="margin-left:6px;display:inline-block;transition:.15s;transform:rotate('+(collapsed[s]?'-90deg':'0deg')+')">▾</span></span></div>'+corpo+'</div>';
  }).join("")||'<div class="empty">Nada aqui com esse filtro.</div>';
 }
 function viewProd(){
  const vd=prod.filter(p=>{const d=venc(p);return d!==null&&d<0;}).length,vs=prod.filter(p=>{const d=venc(p);return d!==null&&d>=0&&d<=7;}).length;
  const resumo=(vd+vs)?'<div class="util" style="font-size:11px;color:var(--muted);padding:2px 2px 10px"><button id="fvenc" class="chip" aria-pressed="'+(!!filt.venc)+'" style="border-color:#C21F4A;color:#C21F4A;font-weight:600">'+vd+' vencidas ↓</button> · '+vs+' vencem em 7 dias'+(filt.venc?' · <span style="color:#C21F4A">mostrando só vencidas (clique de novo p/ ver todas)</span>':'')+'</div>':'';
+ const _ordemEt=["estudio","trad","copidesque","revisao","diagramacao","capa","isbn"];
+ const etapasUsadas=_ordemEt.filter(k=>SELOS.some(s=>cfg(s).stages.includes(k)));
  return '<div class="controls"><button class="chip" aria-pressed="'+(filt.sel==="all")+'" data-sel="all">Todos</button>'
   +SELOS.map(s=>'<button class="chip" aria-pressed="'+(filt.sel===s)+'" data-sel="'+s+'">'+s+'</button>').join("")
   +'<button class="chip" aria-pressed="'+filt.mine+'" id="fmine">Minhas obras</button>'
   +'<select id="prodSort" class="chip" title="Ordenar as obras" style="cursor:pointer">'+[["prio","Prioridade"],["prazoEt","Prazo da etapa"],["prazoProj","Prazo do projeto"],["titulo","Título A–Z"],["inicio","Início recente"]].map(o=>'<option value="'+o[0]+'" '+(prodSort===o[0]?"selected":"")+'>Ordenar: '+o[1]+'</option>').join("")+'</select>'
+  +'<select id="prodEtapa" class="chip" title="Mostrar só os livros numa etapa" style="cursor:pointer">'+[["all","Etapa: todas"]].concat(etapasUsadas.map(k=>[k,"Etapa: "+(STAGE_LABELS[k]||k)])).map(o=>'<option value="'+o[0]+'" '+(filt.etapa===o[0]?"selected":"")+'>'+o[1]+'</option>').join("")+'</select>'
   +'<input type="search" id="q" placeholder="Buscar título, autor" value="'+esc(filt.q)+'">'
-  +'<button class="chip" aria-pressed="'+(prodCols===1)+'" data-prodcols="1" title="1 livro por linha">▬ 1 col</button>'
-  +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="2 livros por linha">▥ 2 col</button>'
+  +'<button class="chip" aria-pressed="'+(prodView==="cards"&&prodCols===1)+'" data-prodview="c1" title="1 livro por linha (card)">▬ 1 col</button>'
+  +'<button class="chip" aria-pressed="'+(prodView==="cards"&&prodCols===2)+'" data-prodview="c2" title="2 livros por linha (card)">▥ 2 col</button>'
+  +'<button class="chip" aria-pressed="'+(prodView==="lista")+'" data-prodview="lista" title="uma linha por livro: título, etapa ativa e prazo do projeto">≡ Lista</button>'
   +'<button class="btn" id="expProd" title="Baixar produção em CSV/Excel (uma linha por obra)">⬇ Exportar</button>'
   +'<button class="btn" id="expEtapas" title="Baixar planilha de obras × etapas (uma linha por etapa)">⬇ Etapas</button>'
   +(arquivadas.length?'<button class="btn" id="verArquivadas" title="Ver / restaurar obras arquivadas">🗄 Arquivadas ('+arquivadas.length+')</button>':'')
@@ -566,7 +585,7 @@ function openPrestador(id){
     +'</div>':'');
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#pr-cancel").onclick=closeEditor;
- if($("#pr-obras"))$("#pr-obras").onclick=()=>openPrestadorPop(p.nome);
+ if($("#pr-obras"))$("#pr-obras").onclick=()=>openPrestadorPop(p.nome,true);
  if($("#pr-save"))$("#pr-save").onclick=async()=>{
   const nome=$("#pr-nome").value.trim(); if(!nome){toast('Falta o nome.','err');return;}
   const papeis=[...d.querySelectorAll('#pr-papeis input:checked')].map(i=>i.value);
@@ -630,7 +649,7 @@ function viewPrestadores(){
  const rowP=p=>{const obras=obrasDe(p);const carga=obras.length;const alto=carga>=3;
    const lista=carga?obras.map(o=>'<span class="dp" style="font-size:9px;padding:1px 6px;margin:0 3px 3px 0;display:inline-block;background:'+o.c+';color:#fff;border:none">'+esc(o.t)+' · '+o.r+'</span>').join(''):'<span style="color:var(--muted)">—</span>';
    return '<tr'+(prestEditavel?' data-prest="'+p.id+'" style="cursor:pointer"':'')+(p.ativo===false?' style="opacity:.6"':'')+'>'
-   +'<td style="vertical-align:top"><b>'+esc(p.nome)+'</b> <span class="dp" data-prestpop="'+esc(p.nome)+'" style="cursor:pointer;padding:1px 6px" title="ver projetos ativos">👁</span>'+(p.ativo===false?' <span class="pz late">fora</span>':'')+(alto?' <span class="pz late" title="3+ obras ativas — evite atribuir mais">carga alta</span>':'')+'<div class="util" style="font-size:10px;color:var(--muted);margin-top:2px">'+carga+' obra'+(carga===1?'':'s')+'</div></td>'
+   +'<td style="vertical-align:top"><b>'+esc(p.nome)+'</b>'+(p.ativo===false?' <span class="pz late">fora</span>':'')+(alto?' <span class="pz late" title="3+ obras ativas — evite atribuir mais">carga alta</span>':'')+'<div style="margin-top:4px"><span class="dp" data-prestpop="'+esc(p.nome)+'" data-prestall="1" style="cursor:pointer;padding:3px 9px;background:#3A3340;color:#fff;border:none;font-size:11px" title="ver todos os projetos deste prestador (ativos e concluídos)">👁 Ver projetos</span></div><div class="util" style="font-size:10px;color:var(--muted);margin-top:3px">'+carga+' obra'+(carga===1?'':'s')+' ativa'+(carga===1?'':'s')+'</div></td>'
    +'<td class="util" style="font-size:12px;vertical-align:top">'+((p.papeis||[]).join(', ')||'<span style="color:var(--muted)">não definido</span>')+'</td>'
    +'<td class="util" style="font-size:11px;vertical-align:top">'+((p.canais||'').includes('+')?'<span class="pz ok">os dois</span>':esc((p.canais||'')==='estudios'?'estúdios':((p.canais||'')==='copi-revisao'?'copi e revisão':'—')))+'</td>'
    +'<td class="util" style="font-size:11px;max-width:360px;vertical-align:top">'+lista+'</td></tr>';};
@@ -1720,13 +1739,13 @@ document.body.addEventListener("click",e=>{
  const opn=e.target.closest("[data-obspin]");if(opn){obsPinToggle(opn.dataset.obspin);const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  const ctb=e.target.closest("[data-contrato]");if(ctb){openContrato(ctb.dataset.contrato);return;}
  const vc=e.target.closest("[data-vercapa]");if(vc){openCapa(vc.dataset.vercapa);return;}
- const ppx=e.target.closest("[data-prestpop]");if(ppx){openPrestadorPop(ppx.dataset.prestpop);return;}
+ const ppx=e.target.closest("[data-prestpop]");if(ppx){openPrestadorPop(ppx.dataset.prestpop,ppx.dataset.prestall==='1');return;}
  const nm=e.target.closest("[data-npmine]");if(nm){npMine=nm.dataset.npmine==="1";renderNotif();return;}
  const fvw=e.target.closest("[data-funcview]");if(fvw){funcView=fvw.dataset.funcview;$("#view").innerHTML=viewFuncoes();return;}
  const cnav=e.target.closest("[data-calnav]");if(cnav){calRef+=parseInt(cnav.dataset.calnav,10);$("#view").innerHTML=viewFuncoes();return;}
  const cwho=e.target.closest("[data-calwho]");if(cwho){calWho=cwho.dataset.calwho;$("#view").innerHTML=viewFuncoes();return;}
  const cfl=e.target.closest("[data-capafilt]");if(cfl){capaFilt=cfl.dataset.capafilt;$("#view").innerHTML=viewCapas();return;}
- const pcl=e.target.closest("[data-prodcols]");if(pcl){prodCols=parseInt(pcl.dataset.prodcols,10);render();return;}
+ const pvw=e.target.closest("[data-prodview]");if(pvw){const v=pvw.dataset.prodview;if(v==="lista"){prodView="lista";}else{prodView="cards";prodCols=(v==="c2")?2:1;}render();return;}
  const oob=e.target.closest("[data-openobra]");if(oob){const np2=$("#notifpanel");if(np2)np2.classList.remove("on");const ns2=$("#notifscrim");if(ns2)ns2.classList.remove("on");openEditor(oob.dataset.openobra);return;}
  const efx=e.target.closest("[data-editfunc]");if(efx){npEdit=efx.dataset.editfunc;const np=$("#notifpanel");if(!np.classList.contains("on")){np.classList.add("on");if(!npPinned)$("#notifscrim").classList.add("on");}buildNotifPanel();return;}
  const dfx=e.target.closest("[data-delfunc]");if(dfx){delFuncao(dfx.dataset.delfunc);return;}
@@ -1760,6 +1779,7 @@ document.body.addEventListener("input",e=>{
 document.body.addEventListener("change",e=>{
  if(e.target.id==="funcsort"){funcSort=e.target.value;$("#view").innerHTML=viewFuncoes();return;}
  if(e.target.id==="prodSort"){prodSort=e.target.value;const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
+ if(e.target.id==="prodEtapa"){filt.etapa=e.target.value;const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  const fc=e.target.closest("[data-func]");if(fc){patchFuncao(fc.dataset.func,{status:fc.checked?"feito":"pendente"});render();return;}
  const nc=e.target.closest("[data-notif]");if(nc){patchNotif(nc.dataset.notif,{feito:nc.checked});renderNotif();return;}
  const ob=e.target.closest(".obsedit");if(ob&&ob.dataset.obsid){patchProd(ob.dataset.obsid,{obs:ob.value.trim()});toast("Observação salva.");return;}
