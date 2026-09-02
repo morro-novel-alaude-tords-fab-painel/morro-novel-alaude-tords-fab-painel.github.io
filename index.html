@@ -913,7 +913,8 @@ function contratoServicos(p){
 }
 function viewContratos(){
  const base=prod.filter(p=>emProducao(p)&&(p.local||'producao')==='producao');
- const info=base.map(p=>{const servs=contratoServicos(p);return {p,servs,vazias:servs.filter(s=>!s.resp).length};});
+ const CT_OPCIONAL=['design','capa']; // estúdios muitas vezes fazem sozinhos ou por fora — não é alarde ficar sem responsável
+ const info=base.map(p=>{const servs=contratoServicos(p);return {p,servs,vazias:servs.filter(s=>!s.resp&&!CT_OPCIONAL.includes(s.key)).length};});
  const totalObras=info.length;
  const comVazias=info.filter(x=>x.vazias>0).length;
  const totalVazias=info.reduce((a,x)=>a+x.vazias,0);
@@ -931,7 +932,7 @@ function viewContratos(){
   +'<div class="kpi"><div class="n" style="color:'+(comVazias?'#C21F4A':'inherit')+'">'+comVazias+'</div><div class="l">Com etapa sem responsável</div></div>'
   +'<div class="kpi"><div class="n" style="color:'+(totalVazias?'#C21F4A':'inherit')+'">'+totalVazias+'</div><div class="l">Etapas a atribuir</div></div>'
   +'</div>';
- h+='<div class="util" style="font-size:12px;color:var(--muted);margin:0 2px 12px">Gerador de contratos: filtre por selo, busque e veja de relance quais etapas ainda estão sem responsável. Clique em <b>Gerar e-mail</b> para montar a solicitação ao ADM — o livro é sempre citado pelo título original. Clique no título para abrir a obra.</div>';
+ h+='<div class="util" style="font-size:12px;color:var(--muted);margin:0 2px 12px">Gerador de contratos: filtre por selo, busque e veja de relance quais etapas ainda estão sem responsável. Clique em <b>Gerar e-mail</b> para montar a solicitação ao ADM — o livro é sempre citado pelo título original. Clique no título para abrir a obra. <b>Design e capa</b> ficam em cinza e não entram na contagem de “a atribuir” (muitos estúdios fazem por conta ou por fora).</div>';
  h+='<div class="controls"><button class="chip" aria-pressed="'+(ctFilt.sel==="all")+'" data-ctsel="all">Todos</button>'
   +SELOS.map(s=>'<button class="chip" aria-pressed="'+(ctFilt.sel===s)+'" data-ctsel="'+s+'">'+s+'</button>').join("")
   +'<button class="chip" aria-pressed="'+ctFilt.vazias+'" id="ctvazias"'+(ctFilt.vazias?' style="border-color:#C21F4A;color:#C21F4A;font-weight:600"':'')+'>⚠ Só com etapa vazia</button>'
@@ -943,8 +944,10 @@ function viewContratos(){
    return '<div class="selogroup" style="--gc:'+c.c+';margin-top:12px"><div class="selohead" style="background:'+c.c+'"><span class="lc"><img src="'+c.logo+'"></span><span class="sn">'+s+'</span><span class="cnt">'+items.length+' título'+(items.length>1?'s':'')+'</span></div>'
    +'<div style="overflow-x:auto"><table style="margin:0"><thead><tr><th>Título</th><th>Situação das etapas</th><th>Págs.</th><th></th></tr></thead><tbody>'
    +items.map(x=>{const p=x.p;
-     const chips=x.servs.map(sv=>{const ok=!!sv.resp;const lbl=sv.label.split(' ')[0];
-       return '<span title="'+esc(sv.label+(ok?': '+sv.resp:' — sem responsável'))+'" style="display:inline-block;font-size:10px;font-family:var(--util);padding:2px 8px;border-radius:20px;margin:2px 3px 2px 0;'+(ok?'background:#E7F0EA;color:#2E5A3E;border:1px solid #cfe0d4':'background:#FBE7EC;color:#C21F4A;border:1px solid #f2ccd6')+'">'+(ok?'✓ ':'○ ')+esc(lbl)+'</span>';}).join('');
+     const chips=x.servs.map(sv=>{const ok=!!sv.resp;const opc=CT_OPCIONAL.includes(sv.key);const lbl=sv.label.split(' ')[0];
+       const est=ok?'background:#E7F0EA;color:#2E5A3E;border:1px solid #cfe0d4':(opc?'background:var(--panel);color:var(--muted);border:1px dashed var(--line)':'background:#FBE7EC;color:#C21F4A;border:1px solid #f2ccd6');
+       const tip=esc(sv.label+(ok?': '+sv.resp:(opc?' — sem responsável (opcional: estúdio ou por fora)':' — sem responsável')));
+       return '<span title="'+tip+'" style="display:inline-block;font-size:10px;font-family:var(--util);padding:2px 8px;border-radius:20px;margin:2px 3px 2px 0;'+est+'">'+(ok?'✓ ':'○ ')+esc(lbl)+'</span>';}).join('');
      const alerta=x.vazias>0?'<span class="dp" style="font-size:10px;padding:1px 7px;background:#FBE7EC;color:#C21F4A;border:1px solid #f2ccd6;margin-left:6px;white-space:nowrap">'+x.vazias+' a atribuir</span>':'<span class="dp" style="font-size:10px;padding:1px 7px;background:#E7F0EA;color:#2E5A3E;border:1px solid #cfe0d4;margin-left:6px">completo</span>';
      return '<tr><td style="min-width:170px"><span class="tt" data-open="'+p.id+'" style="cursor:pointer;font-weight:600">'+esc(p.original||p.titulo)+'</span>'+((p.original&&p.titulo)?'<div class="util" style="font-size:10px;color:var(--muted)">'+esc(p.titulo)+'</div>':'')+'</td>'
        +'<td>'+chips+alerta+'</td>'
@@ -1366,6 +1369,7 @@ function openEditor(id){
   +'<div class="dact" style="margin-top:4px;flex-wrap:wrap;gap:6px"><button class="btn" id="e-emailini" style="flex:1 1 100%">📧 E-mail de início de produção</button>'
   +'<button class="btn" id="e-contrato" style="flex:1 1 100%">📄 E-mail de contrato (etapas)</button>'
   +'<button class="btn" id="e-msgini" style="flex:1 1 100%">📢 Mensagem de início no Discord (para quem já pegou)</button>'
+  +'<button class="btn" id="e-msgtopicos" style="flex:1 1 100%">🧵 Tópicos do Discord (um por etapa)</button>'
   +'<button class="btn" id="e-msgest" style="flex:1 1 45%">🎨 Oferecer ao estúdio</button>'
   +'<button class="btn" id="e-msgcopi" style="flex:1 1 45%">✍️ Oferecer Copi/Revisão</button></div>'
   +'<textarea id="e-msgout" style="width:100%;min-height:150px;font-size:12px;display:none"></textarea>'
@@ -1394,6 +1398,7 @@ function openEditor(id){
  if($("#e-emailini"))$("#e-emailini").onclick=()=>{const t=$("#e-msgout");t.value=msgEmailInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("E-mail de início gerado — confira, ajuste e copie.");};
  if($("#e-contrato"))$("#e-contrato").onclick=()=>openContrato(p.id);
  if($("#e-msgini"))$("#e-msgini").onclick=()=>{const t=$("#e-msgout");t.value=msgInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Mensagem gerada — confira e copie pro canal do Discord.");};
+ if($("#e-msgtopicos"))$("#e-msgtopicos").onclick=()=>{const t=$("#e-msgout");t.value=msgTopicos(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Tópicos gerados — cada bloco é um tópico do Discord. Confira e copie.");};
  if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
  if($("#e-msgcopi"))$("#e-msgcopi").onclick=()=>{const t=$("#e-msgout");t.value=msgOfertaCopiRev(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta de Copi/Revisão gerada — confira e copie pro Discord.");};
  if($("#e-del"))$("#e-del").onclick=()=>{$("#e-delzone").style.display="none";$("#e-delcode").style.display="block";const o=$("#e-delotp");if(o)o.focus();};
@@ -1583,6 +1588,34 @@ function msgInicioProd(p){
  s+='\nTodos os contratos já foram solicitados, nos avisem caso não tenham recebido em até 3 dias úteis.\n';
  s+='\nBom trabalho!';
  return s;
+}
+/* TÓPICOS do Discord — abre um tópico por etapa (Tradução, Copidesque, Diagramação e Capa, Revisão). */
+function topicosProd(p){
+ const fic=ehFiccao(p.selo);const stages=cfg(p.selo).stages||[];
+ const prazoTop=(key)=>{const pz=(p.prazos||{})[key];if(pz&&pz.inicio){const di=new Date(String(pz.inicio).slice(0,10)+'T00:00:00');if(!isNaN(di)){di.setDate(di.getDate()+parseInt(pz.dias||20,10));return dBR(di.toISOString().slice(0,10));}}return null;};
+ const T=[];
+ if(stages.includes('estudio'))T.push({label:fic?'Tradução':'Estúdio',resp:p.resp_estudio||'',prazo:prazoTop('estudio'),frase:fic?'da tradução':'do estúdio'});
+ if(stages.includes('copidesque'))T.push({label:'Copidesque',resp:p.resp_copi||'',prazo:prazoTop('copidesque'),frase:'do copidesque'});
+ if(stages.includes('diagramacao')||stages.includes('capa'))T.push({label:'Diagramação e Capa',resp:p.resp_capista||'',prazo:prazoTop('capa')||prazoTop('diagramacao'),frase:'da diagramação e capa'});
+ if(stages.includes('revisao'))T.push({label:'Revisão',resp:p.resp_revisao||'',prazo:prazoTop('revisao'),frase:'da revisão'});
+ return T;
+}
+function msgTopicos(p){
+ const T=topicosProd(p);
+ if(!T.length)return 'Este selo não tem etapas configuradas para gerar tópicos.';
+ const produtor=p.dono||'';
+ const parts=T.map((t,i)=>{
+   const respNome=t.resp||'(responsável a definir)';
+   const titulo='Título: ['+t.label.toUpperCase()+'] '+respNome+' - Prazo: '+(t.prazo||'a definir');
+   const outros=[];if(produtor)outros.push(produtor);
+   T.forEach((o,j)=>{if(j!==i&&o.resp&&!outros.includes(o.resp))outros.push(o.resp);});
+   let corpo='Oi, @'+respNome+'!\n\n';
+   corpo+='Tópico criado para que possamos acompanhar e sintetizar tudo a respeito '+t.frase+' aqui.\n\n';
+   if(outros.length)corpo+='Para acompanhar: '+outros.map(n=>'@'+n).join(' ')+'\n';
+   corpo+='Bom trabalho!';
+   return '━━━ Tópico '+(i+1)+' · '+t.label+' ━━━\n'+titulo+'\n\n'+corpo;
+ });
+ return parts.join('\n\n\n');
 }
 /* E-MAIL de início de produção (modelo do e-mail, não a mensagem do Discord). */
 function msgEmailInicioProd(p){
