@@ -270,7 +270,8 @@ const CFG=window.CONFIG||{};
 let MODE=(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY)?"live":"demo";
 let sb=null,user=null,role="produtora",demoUser="Isabella";
 let prod=[],estoque=[],reimp=[],arquivadas=[],tab="prod",filt={sel:"all",q:"",mine:true,prio:false,venc:false},collapsed={},prodLoadOk=false;
-let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=2,prodSort="prio";
+let funcView="lista",calRef=0,calWho="todos",funcSort="prazo",capaFilt="todas",prodCols=((()=>{try{return parseInt(localStorage.getItem("prodCols"),10)===2?2:1;}catch(e){return 1;}})()),prodSort="prio";
+let ctFilt={sel:"all",q:"",vazias:false,sort:"prio"};
 function sortFuncs(a,b){
  if(funcSort==="prazo"){const x=a.prazo?String(a.prazo).slice(0,10):"9999-99-99";const y=b.prazo?String(b.prazo).slice(0,10):"9999-99-99";return x<y?-1:x>y?1:0;}
  if(funcSort==="prioridade"){const oa=obraDe(a.obra_id),ob=obraDe(b.obra_id);return (ob?prioEff(ob):-1)-(oa?prioEff(oa):-1);}
@@ -510,8 +511,8 @@ function viewProd(){
   +'<button class="chip" aria-pressed="'+filt.mine+'" id="fmine">Minhas obras</button>'
   +'<select id="prodSort" class="chip" title="Ordenar as obras" style="cursor:pointer">'+[["prio","Prioridade"],["prazoEt","Prazo da etapa"],["prazoProj","Prazo do projeto"],["titulo","Título A–Z"],["inicio","Início recente"]].map(o=>'<option value="'+o[0]+'" '+(prodSort===o[0]?"selected":"")+'>Ordenar: '+o[1]+'</option>').join("")+'</select>'
   +'<input type="search" id="q" placeholder="Buscar título, autor" value="'+esc(filt.q)+'">'
-  +'<button class="chip" aria-pressed="'+(prodCols===1)+'" data-prodcols="1" title="1 livro por linha">▬ 1 col</button>'
-  +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="2 livros por linha">▥ 2 col</button>'
+  +'<button class="chip" aria-pressed="'+(prodCols===1)+'" data-prodcols="1" title="Lista — 1 livro por linha (visão detalhada)">▬ Lista</button>'
+  +'<button class="chip" aria-pressed="'+(prodCols===2)+'" data-prodcols="2" title="Grade — 2 livros por linha (visão compacta)">▥ Grade</button>'
   +'<button class="btn" id="expProd" title="Baixar produção em CSV/Excel (uma linha por obra)">⬇ Exportar</button>'
   +'<button class="btn" id="expEtapas" title="Baixar planilha de obras × etapas (uma linha por etapa)">⬇ Etapas</button>'
   +'<button class="btn" id="recapas" title="Rebaixar as capas do servidor (use se alguma capa parecer desatualizada)">🖼 Recarregar capas</button>'
@@ -911,14 +912,47 @@ function contratoServicos(p){
  return L;
 }
 function viewContratos(){
- const rows=prod.filter(p=>emProducao(p)&&(p.local||'producao')==='producao').slice().sort((a,b)=>prioEff(b)-prioEff(a));
- let h='<div class="kpis"><div class="kpi"><div class="n">'+rows.length+'</div><div class="l">Obras em produção</div></div></div>';
- h+='<div class="util" style="font-size:12px;color:var(--muted);margin:0 2px 12px">Gere o e-mail de emissão de contrato para o ADM a partir dos dados da obra. Confira responsáveis, páginas e datas antes de copiar e enviar.</div>';
- if(!rows.length)return h+'<div class="empty">Nenhuma obra em produção.</div>';
- h+='<div style="overflow-x:auto"><table><thead><tr><th>Título</th><th>Selo</th><th>Responsáveis atribuídos</th><th>Págs.</th><th></th></tr></thead><tbody>';
- h+=rows.map(p=>{const servs=contratoServicos(p);const comResp=servs.filter(s=>s.resp);
-    return '<tr><td>'+esc(p.titulo)+'</td><td class="util" style="font-size:11px">'+esc(p.selo)+'</td><td class="util" style="font-size:11px">'+(comResp.length?comResp.map(s=>esc(s.label.split(' ')[0]+': '+s.resp)).join(' · '):'<span style="color:var(--muted)">— nenhum —</span>')+'</td><td class="util" style="font-size:11px">'+(p.paginas||'—')+'</td><td><button class="btn gold" data-contrato="'+p.id+'" style="padding:4px 12px;white-space:nowrap">Gerar e-mail</button></td></tr>';}).join("");
- return h+'</tbody></table></div>';
+ const base=prod.filter(p=>emProducao(p)&&(p.local||'producao')==='producao');
+ const info=base.map(p=>{const servs=contratoServicos(p);return {p,servs,vazias:servs.filter(s=>!s.resp).length};});
+ const totalObras=info.length;
+ const comVazias=info.filter(x=>x.vazias>0).length;
+ const totalVazias=info.reduce((a,x)=>a+x.vazias,0);
+ const q=ctFilt.q.toLowerCase();
+ let f=info.filter(x=>{const p=x.p;
+   if(ctFilt.sel!=="all"&&p.selo!==ctFilt.sel)return false;
+   if(ctFilt.vazias&&x.vazias===0)return false;
+   if(q&&!((p.titulo+" "+(p.original||"")+" "+(p.autores||"")).toLowerCase().includes(q)))return false;
+   return true;});
+ if(ctFilt.sort==="vazias")f.sort((a,b)=>b.vazias-a.vazias||prioEff(b.p)-prioEff(a.p));
+ else if(ctFilt.sort==="titulo")f.sort((a,b)=>(a.p.original||a.p.titulo||'').localeCompare(b.p.original||b.p.titulo||'','pt-BR'));
+ else f.sort((a,b)=>prioEff(b.p)-prioEff(a.p));
+ let h='<div class="kpis">'
+  +'<div class="kpi"><div class="n">'+totalObras+'</div><div class="l">Obras em produção</div></div>'
+  +'<div class="kpi"><div class="n" style="color:'+(comVazias?'#C21F4A':'inherit')+'">'+comVazias+'</div><div class="l">Com etapa sem responsável</div></div>'
+  +'<div class="kpi"><div class="n" style="color:'+(totalVazias?'#C21F4A':'inherit')+'">'+totalVazias+'</div><div class="l">Etapas a atribuir</div></div>'
+  +'</div>';
+ h+='<div class="util" style="font-size:12px;color:var(--muted);margin:0 2px 12px">Gerador de contratos: filtre por selo, busque e veja de relance quais etapas ainda estão sem responsável. Clique em <b>Gerar e-mail</b> para montar a solicitação ao ADM — o livro é sempre citado pelo título original. Clique no título para abrir a obra.</div>';
+ h+='<div class="controls"><button class="chip" aria-pressed="'+(ctFilt.sel==="all")+'" data-ctsel="all">Todos</button>'
+  +SELOS.map(s=>'<button class="chip" aria-pressed="'+(ctFilt.sel===s)+'" data-ctsel="'+s+'">'+s+'</button>').join("")
+  +'<button class="chip" aria-pressed="'+ctFilt.vazias+'" id="ctvazias"'+(ctFilt.vazias?' style="border-color:#C21F4A;color:#C21F4A;font-weight:600"':'')+'>⚠ Só com etapa vazia</button>'
+  +'<select id="ctsort" class="chip" title="Ordenar" style="cursor:pointer">'+[["prio","Prioridade"],["vazias","Mais etapas vazias"],["titulo","Título A–Z"]].map(o=>'<option value="'+o[0]+'" '+(ctFilt.sort===o[0]?"selected":"")+'>Ordenar: '+o[1]+'</option>').join("")+'</select>'
+  +'<input type="search" id="ctq" placeholder="Buscar título, autor" value="'+esc(ctFilt.q)+'"></div>';
+ if(!totalObras)return h+'<div class="empty">Nenhuma obra em produção.</div>';
+ if(!f.length)return h+'<div class="empty">Nada encontrado com esse filtro.</div>';
+ h+=SELOS.filter(s=>f.some(x=>x.p.selo===s)).map(s=>{const c=cfg(s);const items=f.filter(x=>x.p.selo===s);
+   return '<div class="selogroup" style="--gc:'+c.c+';margin-top:12px"><div class="selohead" style="background:'+c.c+'"><span class="lc"><img src="'+c.logo+'"></span><span class="sn">'+s+'</span><span class="cnt">'+items.length+' título'+(items.length>1?'s':'')+'</span></div>'
+   +'<div style="overflow-x:auto"><table style="margin:0"><thead><tr><th>Título</th><th>Situação das etapas</th><th>Págs.</th><th></th></tr></thead><tbody>'
+   +items.map(x=>{const p=x.p;
+     const chips=x.servs.map(sv=>{const ok=!!sv.resp;const lbl=sv.label.split(' ')[0];
+       return '<span title="'+esc(sv.label+(ok?': '+sv.resp:' — sem responsável'))+'" style="display:inline-block;font-size:10px;font-family:var(--util);padding:2px 8px;border-radius:20px;margin:2px 3px 2px 0;'+(ok?'background:#E7F0EA;color:#2E5A3E;border:1px solid #cfe0d4':'background:#FBE7EC;color:#C21F4A;border:1px solid #f2ccd6')+'">'+(ok?'✓ ':'○ ')+esc(lbl)+'</span>';}).join('');
+     const alerta=x.vazias>0?'<span class="dp" style="font-size:10px;padding:1px 7px;background:#FBE7EC;color:#C21F4A;border:1px solid #f2ccd6;margin-left:6px;white-space:nowrap">'+x.vazias+' a atribuir</span>':'<span class="dp" style="font-size:10px;padding:1px 7px;background:#E7F0EA;color:#2E5A3E;border:1px solid #cfe0d4;margin-left:6px">completo</span>';
+     return '<tr><td style="min-width:170px"><span class="tt" data-open="'+p.id+'" style="cursor:pointer;font-weight:600">'+esc(p.original||p.titulo)+'</span>'+((p.original&&p.titulo)?'<div class="util" style="font-size:10px;color:var(--muted)">'+esc(p.titulo)+'</div>':'')+'</td>'
+       +'<td>'+chips+alerta+'</td>'
+       +'<td class="util" style="font-size:11px">'+(p.paginas||'—')+'</td>'
+       +'<td><button class="btn gold" data-contrato="'+p.id+'" style="padding:4px 12px;white-space:nowrap">Gerar e-mail</button></td></tr>';}).join('')
+   +'</tbody></table></div></div>';
+ }).join('');
+ return h;
 }
 function openContrato(id){
  const p=prod.find(x=>x.id===id);if(!p)return;const d=$("#drawer");d.onpaste=null;
@@ -980,8 +1014,9 @@ function openContrato(id){
      linhas.push(bloco);});
    if(!linhas.length){toast("Marque ao menos um serviço.","err");return;}
    const nomes=labels.length>1?(labels.slice(0,-1).join(', ')+' e '+labels[labels.length-1]):labels[0];
-   const assunto='[Emissão de contrato] '+nomes+' - '+p.titulo+' | '+p.selo;
-   const corpo='Assunto: '+assunto+'\n\nOlá, ADM!\nComo vai?\n\nSolicito os contratos abaixo para o livro '+p.titulo+', do selo '+p.selo+'\n\n'+linhas.join('\n\n')+'\n\nObrigada.\nAtenciosamente,';
+   const tit=(p.original||p.titulo);
+   const assunto='[Emissão de contrato] '+nomes+' - '+tit+' | '+p.selo;
+   const corpo='Assunto: '+assunto+'\n\nOlá, ADM!\nComo vai?\n\nSolicito os contratos abaixo para o livro '+tit+', do selo '+p.selo+'\n\n'+linhas.join('\n\n')+'\n\nObrigada.\nAtenciosamente,';
    $("#ct-out").value=corpo;
    /* ao gerar contrato, abre pagamento das etapas contratadas (se ainda não houver) */
    const pg=Object.assign({},p.pagamentos||{});const stg=cfg(p.selo).stages;let abriu=0;
@@ -1831,7 +1866,9 @@ document.body.addEventListener("click",e=>{
  const cnav=e.target.closest("[data-calnav]");if(cnav){calRef+=parseInt(cnav.dataset.calnav,10);$("#view").innerHTML=viewFuncoes();return;}
  const cwho=e.target.closest("[data-calwho]");if(cwho){calWho=cwho.dataset.calwho;$("#view").innerHTML=viewFuncoes();return;}
  const cfl=e.target.closest("[data-capafilt]");if(cfl){capaFilt=cfl.dataset.capafilt;$("#view").innerHTML=viewCapas();return;}
- const pcl=e.target.closest("[data-prodcols]");if(pcl){prodCols=parseInt(pcl.dataset.prodcols,10);render();return;}
+ const pcl=e.target.closest("[data-prodcols]");if(pcl){prodCols=parseInt(pcl.dataset.prodcols,10);try{localStorage.setItem("prodCols",prodCols);}catch(_){}render();return;}
+ const cts=e.target.closest("[data-ctsel]");if(cts){ctFilt.sel=cts.dataset.ctsel;$("#view").innerHTML=viewContratos();return;}
+ if(e.target.id==="ctvazias"){ctFilt.vazias=!ctFilt.vazias;$("#view").innerHTML=viewContratos();return;}
  const oob=e.target.closest("[data-openobra]");if(oob){const np2=$("#notifpanel");if(np2)np2.classList.remove("on");const ns2=$("#notifscrim");if(ns2)ns2.classList.remove("on");openEditor(oob.dataset.openobra);return;}
  const efx=e.target.closest("[data-editfunc]");if(efx){npEdit=efx.dataset.editfunc;const np=$("#notifpanel");if(!np.classList.contains("on")){np.classList.add("on");if(!npPinned)$("#notifscrim").classList.add("on");}buildNotifPanel();return;}
  const dfx=e.target.closest("[data-delfunc]");if(dfx){delFuncao(dfx.dataset.delfunc);return;}
@@ -1858,6 +1895,7 @@ document.body.addEventListener("input",e=>{
  if(e.target.id==="gs-q"){runSearch(e.target.value);return;}
  if(e.target.id==="qpr"){fPr.q=e.target.value;$("#view").innerHTML=viewPrestadores();_refoca("qpr");return;}
  if(e.target.id==="qco"){fCo.q=e.target.value;$("#view").innerHTML=viewColecoes();_refoca("qco");return;}
+ if(e.target.id==="ctq"){ctFilt.q=e.target.value;$("#view").innerHTML=viewContratos();_refoca("ctq");return;}
  if(e.target.id==="q"){filt.q=e.target.value;
  if(tab==="prod"){const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
  if(tab==="estoque")$("#view").innerHTML=viewEstoque();else if(tab==="capas")$("#view").innerHTML=viewCapas();else if(tab==="reimp")$("#view").innerHTML=viewReimp();
@@ -1865,6 +1903,7 @@ document.body.addEventListener("input",e=>{
 document.body.addEventListener("change",e=>{
  if(e.target.id==="funcsort"){funcSort=e.target.value;$("#view").innerHTML=viewFuncoes();return;}
  if(e.target.id==="prodSort"){prodSort=e.target.value;const el=document.getElementById("prodlist");if(el)el.innerHTML=prodListHTML();return;}
+ if(e.target.id==="ctsort"){ctFilt.sort=e.target.value;$("#view").innerHTML=viewContratos();return;}
  const fc=e.target.closest("[data-func]");if(fc){patchFuncao(fc.dataset.func,{status:fc.checked?"feito":"pendente"});render();return;}
  const nc=e.target.closest("[data-notif]");if(nc){patchNotif(nc.dataset.notif,{feito:nc.checked});renderNotif();return;}
  const ob=e.target.closest(".obsedit");if(ob&&ob.dataset.obsid){patchProd(ob.dataset.obsid,{obs:ob.value.trim()});toast("Observação salva.");return;}
