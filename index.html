@@ -1329,6 +1329,7 @@ function openEditor(id){
   +(temCol("sobre_autor")?'<label class="f">Sobre a autoria</label><textarea id="e-sobreaut" placeholder="mini-bio da autora/autor (opcional)" style="width:100%;min-height:60px">'+esc(p.sobre_autor||"")+'</textarea>':'')
   +'<label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;cursor:pointer;font-size:12px;color:var(--muted)"><input type="checkbox" id="e-inctextos" checked style="margin-top:3px"><span>Incluir <b>Sobre a obra</b> e <b>Sobre a autora</b> na oferta ao estúdio.<br>Desmarque para a versão simples (tipo a da Luana).</span></label>'
   +'<div class="dact" style="margin-top:4px;flex-wrap:wrap;gap:6px"><button class="btn" id="e-emailini" style="flex:1 1 100%">📧 E-mail de início de produção</button>'
+  +'<button class="btn" id="e-contrato" style="flex:1 1 100%">📄 E-mail de contrato (etapas)</button>'
   +'<button class="btn" id="e-msgini" style="flex:1 1 100%">📢 Mensagem de início no Discord (para quem já pegou)</button>'
   +'<button class="btn" id="e-msgest" style="flex:1 1 45%">🎨 Oferecer ao estúdio</button>'
   +'<button class="btn" id="e-msgcopi" style="flex:1 1 45%">✍️ Oferecer Copi/Revisão</button></div>'
@@ -1356,6 +1357,7 @@ function openEditor(id){
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#e-cancel").onclick=closeEditor;
  if($("#e-emailini"))$("#e-emailini").onclick=()=>{const t=$("#e-msgout");t.value=msgEmailInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("E-mail de início gerado — confira, ajuste e copie.");};
+ if($("#e-contrato"))$("#e-contrato").onclick=()=>openContrato(p.id);
  if($("#e-msgini"))$("#e-msgini").onclick=()=>{const t=$("#e-msgout");t.value=msgInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Mensagem gerada — confira e copie pro canal do Discord.");};
  if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
  if($("#e-msgcopi"))$("#e-msgcopi").onclick=()=>{const t=$("#e-msgout");t.value=msgOfertaCopiRev(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta de Copi/Revisão gerada — confira e copie pro Discord.");};
