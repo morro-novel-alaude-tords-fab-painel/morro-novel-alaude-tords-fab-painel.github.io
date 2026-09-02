@@ -230,7 +230,9 @@ const ehFiccao=selo=>!NAO_FICCAO.includes(selo);
 /* só manda ao banco a coluna que existir — resp_design e revisao_tipo são novas */
 const temCol=c=>!!(prod&&prod.length&&Object.prototype.hasOwnProperty.call(prod[0],c));
 const STAGE_LABELS={estudio:"Estúdio",trad:"Trad",copidesque:"Copi",revisao:"Revisão",diagramacao:"Diagram.",capa:"Capa",isbn:"ISBN"};
-const STATUS_OPTS=["Em Produção","Original na pasta","Aguardando original","Aguardando INICIO","Aguardando estúdio","EQ","P&G","Em estoque","Em reimpressão","Obra não lançada"];
+const STATUS_OPTS=["Em Produção","EM PCP","Original na pasta","Aguardando original","Aguardando INICIO","Aguardando estúdio","EQ","P&G","Em estoque","Em reimpressão","Obra não lançada"];
+/* Formato padrão usado nas mensagens quando a obra não tem Dados Técnicos preenchidos (a obra sempre tem prioridade). */
+const FORMATO_PADRAO={miolo:"13,5x21,0cm",capa:"13,7x21,0cm"};
 const DONOS=["Isabella","Luana"];
 const PESSOAS=["Isabella","Luana","Bia"];
 const CAPA_STATUS=["","⏳ Em negociação","Criar do zero","⏳ Em Andamento","Adquirida","✔ Concluído"];
@@ -971,14 +973,15 @@ function openContrato(id){
      const resp=d.querySelector('.ct-resp[data-i="'+i+'"]').value.trim();
      const ini=d.querySelector('.ct-ini[data-i="'+i+'"]').value;const fim=d.querySelector('.ct-fim[data-i="'+i+'"]').value;
      labels.push(servs[i].label);
-     let bloco='• '+servs[i].label+' – '+(resp||'(responsável a definir)')+'\n';
-     bloco+='Páginas: '+(X?('('+X+' + 2 capa) '+Y+' páginas'):'a definir')+'\n';
+     let bloco=servs[i].label+' - '+(resp||'(responsável a definir)')+'\n';
+     bloco+='Páginas: '+(X?('('+X+' + 2 capa =) '+Y+' páginas'):'a definir')+'\n';
      bloco+='Data de início: '+(ini?dBR(ini):'a definir')+'\n';
      bloco+='Data de fim: '+(fim?dBR(fim):'a definir');
      linhas.push(bloco);});
    if(!linhas.length){toast("Marque ao menos um serviço.","err");return;}
-   const assunto='[Emissão de contrato] '+labels.join(', ')+' - '+p.titulo+' | '+p.selo;
-   const corpo='Assunto: '+assunto+'\n\nOlá, ADM!\n\nComo vai?\n\nSolicito os contratos abaixo para o livro '+p.titulo+', do selo '+p.selo+'.\n\n'+linhas.join('\n\n')+'\n\nObrigada!';
+   const nomes=labels.length>1?(labels.slice(0,-1).join(', ')+' e '+labels[labels.length-1]):labels[0];
+   const assunto='[Emissão de contrato] '+nomes+' - '+p.titulo+' | '+p.selo;
+   const corpo='Assunto: '+assunto+'\n\nOlá, ADM!\nComo vai?\n\nSolicito os contratos abaixo para o livro '+p.titulo+', do selo '+p.selo+'\n\n'+linhas.join('\n\n')+'\n\nObrigada.\nAtenciosamente,';
    $("#ct-out").value=corpo;
    /* ao gerar contrato, abre pagamento das etapas contratadas (se ainda não houver) */
    const pg=Object.assign({},p.pagamentos||{});const stg=cfg(p.selo).stages;let abriu=0;
@@ -1325,7 +1328,8 @@ function openEditor(id){
   +(temCol("sinopse")?'<label class="f">Sobre a obra (sinopse) — usada na oferta ao estúdio</label><textarea id="e-sinopse" placeholder="sinopse da obra (opcional; respeita quebras de linha)" style="width:100%;min-height:70px">'+esc(p.sinopse||"")+'</textarea>':'')
   +(temCol("sobre_autor")?'<label class="f">Sobre a autoria</label><textarea id="e-sobreaut" placeholder="mini-bio da autora/autor (opcional)" style="width:100%;min-height:60px">'+esc(p.sobre_autor||"")+'</textarea>':'')
   +'<label style="display:flex;align-items:flex-start;gap:8px;margin:10px 0 4px;cursor:pointer;font-size:12px;color:var(--muted)"><input type="checkbox" id="e-inctextos" checked style="margin-top:3px"><span>Incluir <b>Sobre a obra</b> e <b>Sobre a autora</b> na oferta ao estúdio.<br>Desmarque para a versão simples (tipo a da Luana).</span></label>'
-  +'<div class="dact" style="margin-top:4px;flex-wrap:wrap;gap:6px"><button class="btn" id="e-msgini" style="flex:1 1 100%">📢 Mensagem de início (para quem já pegou)</button>'
+  +'<div class="dact" style="margin-top:4px;flex-wrap:wrap;gap:6px"><button class="btn" id="e-emailini" style="flex:1 1 100%">📧 E-mail de início de produção</button>'
+  +'<button class="btn" id="e-msgini" style="flex:1 1 100%">📢 Mensagem de início no Discord (para quem já pegou)</button>'
   +'<button class="btn" id="e-msgest" style="flex:1 1 45%">🎨 Oferecer ao estúdio</button>'
   +'<button class="btn" id="e-msgcopi" style="flex:1 1 45%">✍️ Oferecer Copi/Revisão</button></div>'
   +'<textarea id="e-msgout" style="width:100%;min-height:150px;font-size:12px;display:none"></textarea>'
@@ -1351,6 +1355,7 @@ function openEditor(id){
   +'<div class="dact"><button class="btn gold" id="e-save" style="flex:1">Salvar</button><button class="btn" id="e-cancel">Fechar</button></div>';
  d.classList.add("on");$("#scrim").classList.add("on");
  $("#dx").onclick=$("#e-cancel").onclick=closeEditor;
+ if($("#e-emailini"))$("#e-emailini").onclick=()=>{const t=$("#e-msgout");t.value=msgEmailInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("E-mail de início gerado — confira, ajuste e copie.");};
  if($("#e-msgini"))$("#e-msgini").onclick=()=>{const t=$("#e-msgout");t.value=msgInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Mensagem gerada — confira e copie pro canal do Discord.");};
  if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
  if($("#e-msgcopi"))$("#e-msgcopi").onclick=()=>{const t=$("#e-msgout");t.value=msgOfertaCopiRev(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta de Copi/Revisão gerada — confira e copie pro Discord.");};
@@ -1518,6 +1523,7 @@ function msgInicioProd(p){
  const col=(p.colecao&&p.colecao!=='Não'&&p.colecao!=='Sim')?p.colecao:'N.A.';
  const est=p.resp_estudio||'a definir';const ano=(new Date()).getFullYear();
  const capa=p.resp_capista||(((p.capa_status||'')+(p.capa_situacao||'')).toLowerCase().includes('adquir')?'adquirida':'a definir');
+ const _dt=p.dados_tecnicos||{};const _mioFmt=((_dt.miolo&&_dt.miolo.formato)||'').trim()||FORMATO_PADRAO.miolo;const _capaFmt=((_dt.capa&&_dt.capa.formato)||'').trim()||FORMATO_PADRAO.capa;
  let s='Olá! Acabei de liberar o projeto '+(p.original||p.titulo)+' para '+est+'.\n\nSeguem as informações iniciais:\n\n**Dados Básicos**\n';
  s+='Título: '+(p.titulo||'A definir')+'\n';
  s+='Subtítulo: '+(p.subtitulo||'N.A.')+'\n';
@@ -1529,12 +1535,47 @@ function msgInicioProd(p){
  s+='Selo: '+p.selo+'\n';
  s+='ISBN (físico): '+(p.isbn_fisico||'solicitado')+'\n';
  s+='ISBN (digital): '+(p.isbn_digital||'solicitado')+'\n';
+ s+='Formato (altura x largura):\n';
+ s+='MIOLO: '+_mioFmt+'\n';
+ s+='CAPA: '+_capaFmt+'\n';
  s+='Estúdio: '+est+'\n';
  if(ehFiccao(p.selo))s+='Copidesque: '+(p.resp_copi||'a definir')+'\n';
  s+='Revisão: '+(p.resp_revisao||'a definir')+'\n';
  s+='Capa: '+capa+'\n';
  if(p.drive_url)s+='\nArquivos encontram-se em: '+p.drive_url+'\n';
  s+='\nBom trabalho!';
+ return s;
+}
+/* E-MAIL de início de produção (modelo do e-mail, não a mensagem do Discord). */
+function msgEmailInicioProd(p){
+ const col=(p.colecao&&p.colecao!=='Não'&&p.colecao!=='Sim')?p.colecao:'N.A.';
+ const est=p.resp_estudio||'a definir';const ano=(new Date()).getFullYear();
+ const orig=p.original||p.titulo||'—';
+ const est_pz=(p.prazos||{}).estudio;
+ let ini=p.data_inicio?dBR(p.data_inicio):(est_pz&&est_pz.inicio?dBR(est_pz.inicio):'[a definir]');
+ let fim='[a definir]';
+ if(est_pz&&est_pz.inicio){const di=new Date(String(est_pz.inicio).slice(0,10)+'T00:00:00');if(!isNaN(di)){di.setDate(di.getDate()+parseInt(est_pz.dias||20,10));fim=dBR(di.toISOString().slice(0,10));}}
+ let s='Assunto: [Início de Produção] '+orig+' - '+est+'\n\n';
+ s+='Olá!\n\nInformo o início do projeto abaixo.\n\n';
+ s+='Dados Básicos\n\n';
+ s+='Título: '+(p.titulo||'A definir')+'\n';
+ s+='Subtítulo: '+(p.subtitulo||'N.A.')+'\n';
+ s+='Nome do(s) autor(es): '+(p.autores||'—')+'\n';
+ s+='Nº da edição: 1\n';
+ s+='Ano de edição: '+ano+'\n';
+ s+='Nome da coleção (se houver): '+col+'\n';
+ s+='Idioma do qual traduzimos: inglês\n';
+ s+='Territorialidade: Brasil\n\n';
+ s+='Dados de produção\n';
+ s+='Selo: '+(p.selo||'')+'\n';
+ s+='ISBN (físico): '+(p.isbn_fisico||'solicitado')+'\n';
+ s+='ISBN (digital): '+(p.isbn_digital||'solicitado')+'\n';
+ s+='Estúdio: '+est+'\n\n';
+ s+='Serviço: Produção Editorial Externa\n';
+ s+='Tipo de contrato: Internacional\n';
+ s+='Início: '+ini+'\n';
+ s+='Fim: '+fim+'\n\n';
+ s+='Bom trabalho!';
  return s;
 }
 function saudacaoHora(){const h=(new Date()).getHours();return h<12?'Bom dia':(h<18?'Boa tarde':'Boa noite');}
