@@ -1667,7 +1667,8 @@ function msgOfertaEstudio(p, incTextos, sin, bio){
   s+='\n- **Sobre a obra**:\n'+(sinT||'[⚠ escreva a sinopse aqui ou apague esta seção]')+'\n';
   s+='\n- **Sobre a autora**:\n'+(bioT||'[⚠ escreva sobre a autoria aqui ou apague esta seção]')+'\n';
  }
- if(amz)s+='\nLink da Amazon para espiar o original: '+amz+'\n';
+ const linkOrig=amz||('https://www.amazon.com/s?k='+encodeURIComponent((p.original||p.titulo||'')+' livro'));
+ s+='\n👀 Espie o link do original: '+linkOrig+'\n';
  if(pag)s+='Paginação do original: '+pag+' páginas\n';
  s+='Quem tiver interesse na produção, favor me acionar no privado 😉';
  return s;
