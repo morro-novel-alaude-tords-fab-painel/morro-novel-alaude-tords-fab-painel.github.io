@@ -1399,7 +1399,7 @@ function openEditor(id){
  if($("#e-contrato"))$("#e-contrato").onclick=()=>openContrato(p.id);
  if($("#e-msgini"))$("#e-msgini").onclick=()=>{const t=$("#e-msgout");t.value=msgInicioProd(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Mensagem gerada — confira e copie pro canal do Discord.");};
  if($("#e-msgtopicos"))$("#e-msgtopicos").onclick=()=>{const t=$("#e-msgout");t.value=msgTopicos(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Tópicos gerados — cada bloco é um tópico do Discord. Confira e copie.");};
- if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
+ if($("#e-msgest"))$("#e-msgest").onclick=()=>{const inc=$("#e-inctextos")?$("#e-inctextos").checked:true;const sin=$("#e-sinopse")?$("#e-sinopse").value:null;const bio=$("#e-sobreaut")?$("#e-sobreaut").value:null;const amzL=$("#e-amz")?$("#e-amz").value:null;const t=$("#e-msgout");t.value=msgOfertaEstudio(p,inc,sin,bio,amzL);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta ao estúdio gerada — confira e copie pro Discord.");};
  if($("#e-msgcopi"))$("#e-msgcopi").onclick=()=>{const t=$("#e-msgout");t.value=msgOfertaCopiRev(p);t.style.display="block";$("#e-msgact").style.display="flex";toast("Oferta de Copi/Revisão gerada — confira e copie pro Discord.");};
  if($("#e-del"))$("#e-del").onclick=()=>{$("#e-delzone").style.display="none";$("#e-delcode").style.display="block";const o=$("#e-delotp");if(o)o.focus();};
  if($("#e-delcancel"))$("#e-delcancel").onclick=()=>{$("#e-delcode").style.display="none";$("#e-delzone").style.display="block";const o=$("#e-delotp");if(o)o.value="";};
@@ -1652,10 +1652,10 @@ function msgEmailInicioProd(p){
 function saudacaoHora(){const h=(new Date()).getHours();return h<12?'Bom dia':(h<18?'Boa tarde':'Boa noite');}
 /* Oferta ao ESTÚDIO (tradução/texto) — formato completo da Isabella. incTextos: inclui "Sobre a obra/autora".
    sin/bio: textos vindos dos campos abertos no editor (podem não estar salvos ainda). */
-function msgOfertaEstudio(p, incTextos, sin, bio){
+function msgOfertaEstudio(p, incTextos, sin, bio, amzLive){
  const orig=p.original||p.titulo||'—';
  const aut=p.autores||'—';
- const amz=p.amazon_url||'';
+ const amz=(amzLive!=null&&String(amzLive).trim()!=='')?String(amzLive).trim():(p.amazon_url||''); // usa o link digitado no editor mesmo sem salvar
  const pag=p.paginas||'';
  let s=saudacaoHora()+', @everyone! 📚\n';
  s+='Nova liberação de produção → **'+(p.selo||'')+'**\n';
