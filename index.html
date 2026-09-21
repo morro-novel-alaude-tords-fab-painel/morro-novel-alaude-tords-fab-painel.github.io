@@ -1594,11 +1594,36 @@ function topicosProd(p){
  const fic=ehFiccao(p.selo);const stages=cfg(p.selo).stages||[];
  const prazoTop=(key)=>{const pz=(p.prazos||{})[key];if(pz&&pz.inicio){const di=new Date(String(pz.inicio).slice(0,10)+'T00:00:00');if(!isNaN(di)){di.setDate(di.getDate()+parseInt(pz.dias||20,10));return dBR(di.toISOString().slice(0,10));}}return null;};
  const T=[];
- if(stages.includes('estudio'))T.push({label:fic?'Tradução':'Estúdio',resp:p.resp_estudio||'',prazo:prazoTop('estudio'),frase:fic?'da tradução':'do estúdio'});
- if(stages.includes('copidesque'))T.push({label:'Copidesque',resp:p.resp_copi||'',prazo:prazoTop('copidesque'),frase:'do copidesque'});
- if(stages.includes('diagramacao')||stages.includes('capa'))T.push({label:'Diagramação e Capa',resp:p.resp_capista||'',prazo:prazoTop('capa')||prazoTop('diagramacao'),frase:'da diagramação e capa'});
- if(stages.includes('revisao'))T.push({label:'Revisão',resp:p.resp_revisao||'',prazo:prazoTop('revisao'),frase:'da revisão'});
+ if(stages.includes('estudio'))T.push({key:'estudio',trad:fic,label:fic?'Tradução':'Estúdio',resp:p.resp_estudio||'',prazo:prazoTop('estudio'),frase:fic?'da tradução':'do estúdio'});
+ if(stages.includes('copidesque'))T.push({key:'copidesque',label:'Copidesque',resp:p.resp_copi||'',prazo:prazoTop('copidesque'),frase:'do copidesque'});
+ if(stages.includes('diagramacao')||stages.includes('capa'))T.push({key:'capa',label:'Diagramação e Capa',resp:p.resp_capista||'',prazo:prazoTop('capa')||prazoTop('diagramacao'),frase:'da diagramação e capa'});
+ if(stages.includes('revisao'))T.push({key:'revisao',label:'Revisão',resp:p.resp_revisao||'',prazo:prazoTop('revisao'),frase:'da revisão'});
  return T;
+}
+/* Corpo do tópico de TRADUÇÃO — texto da Luana (tradução assistida por IA). */
+function corpoTraducao(p){
+ const tit=p.original||p.titulo||'[título do livro]';
+ const aut=p.autores||'[autor]';
+ const est=p.resp_estudio||'ESTÚDIO';
+ let s='Oi, @'+est+'! Segue o material do '+tit+', do '+aut+'.\n\n';
+ s+='Como funciona: a tradução é assistida por IA, mas é sua e sai com o seu nome. A ferramenta faz uma primeira versão; você revisa, corrige e fecha. Se em algum trecho for mais rápido traduzir do zero, traduza do zero.\n\n';
+ s+='Onde fazer: em um projeto do Claude ou do ChatGPT. Sobe o `GLOSSARIO_IA` na base de conhecimento do projeto: assim ele está sempre presente e você não precisa colar de novo a cada capítulo.\n\n';
+ s+='Os cinco arquivos\n';
+ s+='• `PROMPT_TRADUCAO` — cola no início de cada conversa de tradução\n';
+ s+='• `GLOSSARIO_IA` — vai na base do projeto\n';
+ s+='• `GLOSSARIO_EQUIPE` (PDF) — o mesmo, diagramado, para consultar\n';
+ s+='• `GUIA_TRADUTOR` — como trabalhar e onde a ferramenta erra neste livro\n';
+ s+='• `PROMPT_QA` — segundo passe, obrigatório\n\n';
+ s+='Passo a passo\n';
+ s+='1. Conversa nova no projeto → cola o PROMPT_TRADUCAO\n';
+ s+='2. Cola um capítulo (~2.500 palavras). Nunca o livro inteiro\n';
+ s+='3. Traduz, revisa, salva\n';
+ s+='4. Outra conversa nova → cola o PROMPT_QA → roda sobre o capítulo pronto\n\n';
+ s+='Conversa nova a cada passe: a anterior arrasta.\n\n';
+ s+='Observações sobre este livro:\n';
+ s+='• [adicione aqui as observações específicas deste livro]\n\n';
+ s+='Amostra: os dois primeiros capítulos vêm antes do copi. Dúvida de termo, fala aqui com a equipe antes de decidir';
+ return s;
 }
 function msgTopicos(p){
  const T=topicosProd(p);
@@ -1609,10 +1634,9 @@ function msgTopicos(p){
    const titulo='Título: ['+t.label.toUpperCase()+'] '+respNome+' - Prazo: '+(t.prazo||'a definir');
    const outros=[];if(produtor)outros.push(produtor);
    T.forEach((o,j)=>{if(j!==i&&o.resp&&!outros.includes(o.resp))outros.push(o.resp);});
-   let corpo='Oi, @'+respNome+'!\n\n';
-   corpo+='Tópico criado para que possamos acompanhar e sintetizar tudo a respeito '+t.frase+' aqui.\n\n';
-   if(outros.length)corpo+='Para acompanhar: '+outros.map(n=>'@'+n).join(' ')+'\n';
-   corpo+='Bom trabalho!';
+   let corpo;
+   if(t.trad){corpo=corpoTraducao(p);}
+   else{corpo='Oi, @'+respNome+'!\n\n'+'Tópico criado para que possamos acompanhar e sintetizar tudo a respeito '+t.frase+' aqui.\n\n'+(outros.length?('Para acompanhar: '+outros.map(n=>'@'+n).join(' ')+'\n'):'')+'Bom trabalho!';}
    return '━━━ Tópico '+(i+1)+' · '+t.label+' ━━━\n'+titulo+'\n\n'+corpo;
  });
  return parts.join('\n\n\n');
